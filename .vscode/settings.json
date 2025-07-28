@@ -1,0 +1,14 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "database": "samraz_boutique",
+      "username": "postgres",
+      "password": "postgres",
+      "name": "samraz_boutique"
+    }
+  ]
+}

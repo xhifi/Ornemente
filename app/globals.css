@@ -1,26 +1,169 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(100% 0 none);
+  --foreground: oklch(14.051% 0.00437 285.82);
+  --muted: oklch(96.756% 0.00133 286.37);
+  --muted-foreground: oklch(55.194% 0.0137 285.94);
+  --popover: oklch(100% 0 none);
+  --popover-foreground: oklch(14.051% 0.00437 285.82);
+  --card: oklch(100% 0 none);
+  --card-foreground: oklch(14.051% 0.00437 285.82);
+  --border: oklch(91.972% 0.00404 286.32);
+  --input: oklch(91.972% 0.00404 286.32);
+  --primary: oklch(21.032% 0.00588 285.88);
+  --primary-foreground: oklch(98.481% 0 none);
+  --secondary: oklch(96.756% 0.00133 286.37);
+  --secondary-foreground: oklch(21.032% 0.00588 285.88);
+  --accent: oklch(96.756% 0.00133 286.37);
+  --accent-foreground: oklch(21.032% 0.00588 285.88);
+  --destructive: oklch(54.367% 0.199 28.246);
+  --destructive-foreground: oklch(100% 0 none);
+  --success: oklch(76.589% 0.21707 148.53);
+  --success-foreground: oklch(16.738% 0.03704 157.47);
+  --warning: oklch(92.672% 0.10493 98.283);
+  --warning-foreground: oklch(40.785% 0.08132 96.359);
+  --info: oklch(67.196% 0.11773 222.38);
+  --info-foreground: oklch(18.536% 0.02591 217.39);
+  --ring: oklch(21.032% 0.00588 285.88);
+  --chart-1: oklch(67.72% 0.15714 35.19);
+  --chart-2: oklch(63.092% 0.10126 183.49);
+  --chart-3: oklch(37.87% 0.04398 225.54);
+  --chart-4: oklch(83.363% 0.11859 88.146);
+  --chart-5: oklch(78.344% 0.12605 58.749);
+}
+
+.dark {
+  --background: oklch(14.203% 0.00468 308.45);
+  --foreground: oklch(98.481% 0 none);
+  --muted: oklch(27.412% 0.00548 286.03);
+  --muted-foreground: oklch(71.186% 0.01287 286.07);
+  --popover: oklch(19.122% 0 none);
+  --popover-foreground: oklch(98.481% 0 none);
+  --card: oklch(19.122% 0 none);
+  --card-foreground: oklch(98.481% 0 none);
+  --border: oklch(27.412% 0.00548 286.03);
+  --input: oklch(27.412% 0.00548 286.03);
+  --primary: oklch(60.28% 0.21769 257.42);
+  --primary-foreground: oklch(92.188% 0 none);
+  --secondary: oklch(27.412% 0.00548 286.03);
+  --secondary-foreground: oklch(98.481% 0 none);
+  --accent: oklch(27.412% 0.00548 286.03);
+  --accent-foreground: oklch(98.481% 0 none);
+  --destructive: oklch(35.589% 0.12043 28.808);
+  --destructive-foreground: oklch(85.513% 0.05949 23.121);
+  --success: oklch(41.453% 0.13288 143.71);
+  --success-foreground: oklch(90.416% 0.14915 146.93);
+  --warning: oklch(31.188% 0.09535 37.659);
+  --warning-foreground: oklch(81.606% 0.09512 39.206);
+  --info: oklch(48.842% 0.0788 194.88);
+  --info-foreground: oklch(100% 0 none);
+  --ring: oklch(87.091% 0.00548 286.29);
+  --chart-1: oklch(52.983% 0.19317 262.05);
+  --chart-2: oklch(24.775% 0 none);
+  --chart-3: oklch(27.27% 0 none);
+  --chart-4: oklch(41.65% 0 none);
+  --chart-5: oklch(48.908% 0 none);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  a {
+    @apply text-primary underline-offset-4 transition-colors hover:text-primary/80;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold text-foreground;
+  }
+  p {
+    @apply text-muted-foreground;
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+  }
 }
