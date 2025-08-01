@@ -1,25 +1,14 @@
 import ImageSlideshow from "@/components/ui/factory/image-slideshow";
 import AddToCartButton from "@/components/ui/factory/product-cards/AddToCartButton";
-import products from "@/data/products";
-import Image from "next/image";
-
-import Nishat1 from "@/data/placeholder/nishat-1.jpg";
-import Nishat2 from "@/data/placeholder/nishat-2.jpg";
-import Nishat3 from "@/data/placeholder/nishat-3.jpg";
-import Nishat4 from "@/data/placeholder/nishat-4.jpg";
-import Alkaram1 from "@/data/placeholder/alkaram-1.jpg";
-import Alkaram2 from "@/data/placeholder/alkaram-2.jpg";
-import Alkaram3 from "@/data/placeholder/alkaram-3.jpg";
-import Alkaram4 from "@/data/placeholder/alkaram-4.jpg";
-
-const images = [Nishat1, Nishat2, Nishat3, Nishat4, Alkaram1, Alkaram2, Alkaram3, Alkaram4];
+import getProductById from "@/data/dal/shop/products/get-product-by-id";
 
 const SKUPage = async ({ params }) => {
   const id = (await params).id;
-  const product = products.find((product) => product.id === +id);
-  const discountedPrice = product.discount
-    ? Math.round(product.originalPrice - (product.discount * product.originalPrice) / 100)
-    : product.originalPrice;
+  const { product } = await getProductById(id);
+  const discount = product?.discount > 0 && (product?.discount / 100) * product?.original_price;
+  const discountedPrice = parseInt(discount && product?.original_price - discount);
+
+  console.log(product);
 
   return (
     <div className="px-6 py-12 max-w-screen-xl mx-auto">
@@ -27,32 +16,38 @@ const SKUPage = async ({ params }) => {
         <div className="md:w-1/2 w-full">
           <div className="h-full relative">
             {/* <Image src={product.coverImage} width={700} height={700} alt="" className="w-auto h-full block" /> */}
-            <ImageSlideshow images={images} />
+            <ImageSlideshow images={product.images} />
 
             <span className="bg-destructive text-secondary absolute top-6 right-6 px-3 py-1.5 text-sm rounded-full">
-              Discounted <span className="text-base font-bold">15%</span>
+              Off <span className="text-base font-bold">{product.discount}%</span>
             </span>
           </div>
         </div>
         <div className="md:w-1/2 w-full">
           <div className="flex flex-col space-y-3 h-full">
             <h1>
-              {product?.pieces?.length} Piece - {product.brand + " " + product.name} - {product.id}
+              {product?.pieces?.length} Piece - {product.brand_name + " " + product.name} - {product.id}
             </h1>
             <p>
-              <span className="line-through text-xl">Rs. {product.originalPrice}</span>
-              <span className="text-3xl text-destructive ms-2">Rs. {discountedPrice}</span>
+              {product.discount > 0 ? (
+                <>
+                  <span className="line-through text-xl text-black">Rs {product.original_price.toLocaleString()}</span>
+                  <span className="text-3xl text-destructive ms-2">Rs {discountedPrice.toLocaleString()}</span>
+                </>
+              ) : (
+                <span className="text-foreground/75 text-3xl">Rs {product.original_price.toLocaleString()}</span>
+              )}
             </p>
             <p>SKU: {product.sku}</p>
 
             <AddToCartButton product={product} />
 
             <p className="text-destructive animate-pulse">Only {product.remainingStock} left in stock</p>
-            <p>{product.description}</p>
+            {product.tagline && product.tagline !== "" && <p>{product.tagline}</p>}
 
             <div>
               <h2 className="font-bold">Product Description:</h2>
-              <p>{product.tagline}</p>
+              <p>{product.description}</p>
             </div>
 
             <div>
@@ -64,11 +59,11 @@ const SKUPage = async ({ params }) => {
                       <p>{piece.description}</p>
                       <p>
                         <b>Fabric:</b>
-                        <span className="ms-2">{piece.fabric}</span>
+                        <span className="ms-2">{piece.fabric_name}</span>
                       </p>
                       <p>
                         <b>Color:</b>
-                        <span className="ms-2">{piece.color}</span>
+                        <span className="ms-2">{piece.color_name}</span>
                       </p>
                     </li>
                   ))}

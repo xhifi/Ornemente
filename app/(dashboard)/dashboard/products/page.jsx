@@ -1,19 +1,22 @@
 import React from "react";
 import Link from "next/link";
-import { getProducts } from "@/data/dal/shop/products/product-actions";
 import getShopSexes from "@/data/dal/shop/get-shop-sexes";
 import AddProductDialog from "@/components/forms/AddProductDialog";
 import DeleteProductDialog from "@/components/forms/DeleteProductDialog";
+import Image from "next/image";
+import getProductsPaginated from "@/data/dal/shop/products/get-all-products-paginated";
 
 // Server Component - async function to fetch data
 export default async function ProductsPage() {
   // Fetch data on the server
-  const productsResult = await getProducts({}); // Pass empty object for default values
+  const productsResult = await getProductsPaginated({}); // Pass empty object for default values
   const sexesResult = await getShopSexes();
 
   // Extract the data
   const products = productsResult.products || [];
   const sexes = sexesResult;
+
+  console.log(products);
 
   return (
     <div className="p-6">
@@ -50,43 +53,59 @@ export default async function ProductsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-md"></div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">{product.description || "No description"}</div>
+              {products.map((product) => {
+                console.log(`PRODUCT DATA`, product);
+
+                return (
+                  <tr key={product.id}>
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-15 w-10 bg-gray-200 overflow-hidden">
+                          {product?.images.length > 0 ? (
+                            <Image
+                              src={product?.images[0]?.path}
+                              alt={product.name}
+                              width={100}
+                              height={100}
+                              className="object-cover h-full w-full object-center"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            <Link href={`/dashboard/products/${product.id}`}>{product.name}</Link>
+                          </div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">{product.description || "No description"}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{product.sex_name || "Unspecified"}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {product.original_price ? `₨${product.original_price.toLocaleString()}` : "N/A"}
-                    </div>
-                    {product.discount > 0 && <div className="text-xs text-green-600">{product.discount}% off</div>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.publish_status === "published" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {product.publish_status === "published" ? "Published" : "Draft"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Link href={`/dashboard/products/${product.id}/edit`} className="text-blue-600 hover:text-blue-900 mr-4">
-                      Edit
-                    </Link>
-                    <DeleteProductDialog productId={product.id} productName={product.name} />
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{product.sex_name || "Unspecified"}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {product.original_price ? `₨${product.original_price.toLocaleString()}` : "N/A"}
+                      </div>
+                      {product.discount > 0 && <div className="text-xs text-green-600">{product.discount}% off</div>}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          product.publish_status === "published" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {product.publish_status === "published" ? "Published" : "Draft"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link href={`/dashboard/products/${product.id}/edit`} className="text-blue-600 hover:text-blue-900 mr-4">
+                        Edit
+                      </Link>
+                      <DeleteProductDialog productId={product.id} productName={product.name} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

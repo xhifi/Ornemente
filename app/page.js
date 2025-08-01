@@ -1,15 +1,14 @@
 import Carousel from "@/components/ui/factory/carousel/Carousel";
-import { ClockIcon, ShoppingCartIcon } from "lucide-react";
+import { ClockIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import ProductsData from "@/data/products";
-import ProductsUpdated from "@/data/products.updated";
 import ProductCard from "@/components/ui/factory/product-cards/ProductCard";
-import { initializeBucket } from "@/lib/minio";
 
-export default function Home() {
-  console.dir(ProductsUpdated, { depth: null });
-  initializeBucket();
+import getProductsPaginated from "@/data/dal/shop/products/get-all-products-paginated";
+
+export default async function Home() {
+  const products = await getProductsPaginated({ limit: 10, offset: 0 });
+
   return (
     <div className="dark">
       <Carousel />
@@ -34,9 +33,17 @@ export default function Home() {
         </div>
       </div>
 
-      <div className=" mx-auto px-4 py-8">
+      {/* <div className=" mx-auto px-4 py-8">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 grid-flow-row">
           {ProductsData.map((product) => {
+            return <ProductCard product={product} key={product.id} />;
+          })}
+        </div>
+      </div> */}
+
+      <div className="mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 grid-flow-row">
+          {products.products.map((product) => {
             return <ProductCard product={product} key={product.id} />;
           })}
         </div>

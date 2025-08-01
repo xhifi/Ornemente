@@ -29,8 +29,8 @@ const page = () => {
                       {item.name} - {item.brand}
                     </h2>
                     <p className="space-x-2">
-                      <span className="line-through text-destructive">Rs. {item.originalPrice.toLocaleString()}</span>
-                      <span>Rs. {priceAfterDiscount.toLocaleString()}</span>
+                      <span className="line-through text-destructive">Rs. {item.originalPrice?.toLocaleString()}</span>
+                      <span>Rs. {priceAfterDiscount?.toLocaleString()}</span>
                     </p>
                     <p className="text-sm">{item.collection}</p>
                     <p className="text-sm">SKU: {item.sku}</p>
@@ -42,7 +42,7 @@ const page = () => {
                     <CartQuantityModifier product={item} initialCount={item.quantity} />
                     <span className="text-3xl font-semibold">
                       <span className="text-base me-1 text-primary/50">Rs.</span>
-                      {(priceAfterDiscount * item.quantity).toLocaleString()}
+                      {(priceAfterDiscount * item.quantity)?.toLocaleString()}
                     </span>
                   </div>
                 </li>

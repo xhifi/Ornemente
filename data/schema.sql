@@ -210,6 +210,9 @@ CREATE TABLE shop_pieces (
 
 ALTER SEQUENCE shop_pieces_id_seq RESTART WITH 41;
 
+ALTER TABLE
+    shop_pieces DROP CONSTRAINT shop_pieces_product_id_unique;
+
 -- ========================
 -- shop_product_sizes
 -- ========================
@@ -224,6 +227,11 @@ CREATE TABLE shop_product_sizes (
     created_by UUID REFERENCES users(id),
     updated_by UUID REFERENCES users(id)
 );
+
+ALTER TABLE
+    shop_product_sizes
+ADD
+    CONSTRAINT shop_product_sizes_product_id_size_id_unique UNIQUE (product_id, size_id);
 
 -- ========================
 -- shop_designs

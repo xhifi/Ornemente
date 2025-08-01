@@ -1,0 +1,13 @@
+To fix the error "there is no unique or exclusion constraint matching the ON CONFLICT specification",
+execute this SQL statement in your database:
+
+ALTER TABLE shop_product_sizes ADD CONSTRAINT shop_product_sizes_product_id_size_id_unique UNIQUE (product_id, size_id);
+
+This adds a unique constraint on the combination of product_id and size_id in the shop_product_sizes table,
+which is required for the ON CONFLICT clause to work properly in your update-product.js file.
+
+Similarly, for the shop_pieces table:
+
+ALTER TABLE shop_pieces ADD CONSTRAINT shop_pieces_product_id_unique UNIQUE (product_id);
+
+This will ensure both your INSERT INTO statements with ON CONFLICT will work correctly.

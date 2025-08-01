@@ -421,3 +421,31 @@ ORDER BY
     created_at DESC
 LIMIT
     20;
+
+SELECT
+    *
+FROM
+    shop_pieces;
+
+SELECT
+    *
+FROM
+    shop_product_sizes;
+
+SELECT
+    *
+FROM
+    shop_designs;
+
+INSERT INTO
+    shop_product_sizes (product_id, size_id, stock)
+VALUES
+    (1000000, 'M', 55) ON CONFLICT (product_id, size_id) DO
+UPDATE
+SET
+    stock = EXCLUDED.stock RETURNING *;
+
+SELECT
+    *
+FROM
+    shop_products

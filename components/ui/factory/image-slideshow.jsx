@@ -160,7 +160,7 @@ const ImageSlideshow = ({
                 <SplideSlide key={`main-${image.id || image.src}`}>
                   <div className="h-full w-full bg-secondary">
                     <Image
-                      src={image.src}
+                      src={image.path}
                       alt={`product ${index} preview image`}
                       width={400}
                       height={700}
@@ -184,7 +184,7 @@ const ImageSlideshow = ({
               >
                 <div className="cursor-pointer border-2 border-transparent overflow-hidden transition-opacity h-full w-full">
                   <Image
-                    src={image.src}
+                    src={image.path}
                     width={110}
                     height={180}
                     alt={`product ${index} preview thumbnail`}

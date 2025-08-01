@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteProduct } from "@/data/dal/shop/products/product-actions";
+import deleteProductByID from "@/data/dal/shop/products/delete-product-by-id";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 export default function DeleteProductDialog({ productId, productName }) {
@@ -14,7 +14,7 @@ export default function DeleteProductDialog({ productId, productName }) {
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      const result = await deleteProduct(productId);
+      const result = await deleteProductByID(productId);
 
       if (result.error) {
         console.error("Error deleting product:", result.error);
