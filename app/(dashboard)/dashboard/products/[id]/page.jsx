@@ -1,4 +1,4 @@
-import { getProductById } from "@/data/dal/shop/products/deprecated.product-actions";
+import getProductById from "@/data/dal/shop/products/get-product-by-id";
 
 export const dynamic = "force-dynamic"; // Force dynamic rendering for this page
 
