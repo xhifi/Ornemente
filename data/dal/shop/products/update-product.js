@@ -29,7 +29,7 @@ const updateProduct = async (data) => {
     `,
       [name, description, tagline, sex, type, brand, original_price, discount, note, id]
     );
-    console.log(`--> Updated product:`, updateProduct.rows);
+
     if (!updateProduct.rowCount) {
       throw new Error(`Failed to update product with ID ${id}`);
     }
@@ -45,7 +45,6 @@ const updateProduct = async (data) => {
           `,
           [id, size.code, size.stock]
         );
-        console.log(`--> Updated product size:`, sizeUpdated.rows);
       });
     }
     // Update product designs
@@ -59,15 +58,12 @@ const updateProduct = async (data) => {
           `,
           [id, design.id]
         );
-        console.log(`--> Updated product design:`, designUpdated.rows);
       });
     }
 
     // Update product pieces
     if (pieces && pieces.length > 0) {
       pieces.forEach(async (piece) => {
-        // Assuming pieces have fields product_id, name, description, fabric, color
-        // Upon updating we will insert or update the piece
         const pieceUpdated = await query(
           `INSERT INTO shop_pieces (product_id, name, description, fabric, color)
            VALUES ($1, $2, $3, $4, $5)
@@ -75,13 +71,11 @@ const updateProduct = async (data) => {
           `,
           [id, piece.name, piece.description, piece.fabric, piece.color]
         );
-        console.log(`--> Updated product piece:`, pieceUpdated.rows);
       });
     }
     revalidateTag(`products`);
     revalidateTag(`product`);
     const productData = await getProductById(id);
-    console.log(`PRODUCT UPDATED`, productData);
     return productData;
   } catch (error) {
     console.error("Error updating product:", error);
