@@ -16,7 +16,7 @@ const zodSchema = z.object({
   sex: z.coerce.number().positive("Gender selection is required"),
 });
 
-export default function AddProductDialog({ sexes, buttonText = "Add Product" }) {
+const AddProductDialog = ({ sexes, buttonText = "Add Product" }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -183,4 +183,6 @@ export default function AddProductDialog({ sexes, buttonText = "Add Product" }) 
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default AddProductDialog;
