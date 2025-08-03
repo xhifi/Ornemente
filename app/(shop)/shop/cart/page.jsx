@@ -4,6 +4,8 @@ import { useCart } from "@/components/providers/CartProvider";
 import CartQuantityModifier from "@/components/ui/factory/cart/CartQuantityModifier";
 import { Trash2Icon } from "lucide-react";
 import Image from "next/image";
+import path from "path";
+import { generateThumbnailURL } from "@/lib/utils";
 
 const page = () => {
   const { cart, clearCart, removeFromCart } = useCart();
@@ -15,22 +17,31 @@ const page = () => {
           <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
           <ul className="space-y-3">
             {cart.map((item, index) => {
-              const priceAfterDiscount = item.discount !== 0 && Math.round(item.originalPrice - (item.discount * item.originalPrice) / 100);
+              const discount = item?.discount > 0 && (item?.discount / 100) * item?.original_price;
+              const discountedPrice = parseInt(discount && item?.original_price - discount);
+
               return (
                 <li key={index} className="flex items-center gap-4 pe-6 hover:bg-secondary">
                   <Image
-                    src={item.coverImage}
+                    src={generateThumbnailURL(item.images[0].key)}
                     width={100}
-                    height={150}
+                    height={100}
                     alt={`${item.brand} - ${item.name} - ${item.collection} - ${item.sku}`}
+                    priority
                   />
                   <div>
                     <h2 className="text-lg font-bold">
-                      {item.name} - {item.brand}
+                      {item.name} - {item.brand_name}
                     </h2>
                     <p className="space-x-2">
-                      <span className="line-through text-destructive">Rs. {item.originalPrice?.toLocaleString()}</span>
-                      <span>Rs. {priceAfterDiscount?.toLocaleString()}</span>
+                      {discountedPrice ? (
+                        <>
+                          <span className="line-through text-destructive">Rs. {item.original_price?.toLocaleString()}</span>
+                          <span>Rs. {discountedPrice?.toLocaleString()}</span>
+                        </>
+                      ) : (
+                        <span>Rs. {item.original_price?.toLocaleString()}</span>
+                      )}
                     </p>
                     <p className="text-sm">{item.collection}</p>
                     <p className="text-sm">SKU: {item.sku}</p>
@@ -42,7 +53,9 @@ const page = () => {
                     <CartQuantityModifier product={item} initialCount={item.quantity} />
                     <span className="text-3xl font-semibold">
                       <span className="text-base me-1 text-primary/50">Rs.</span>
-                      {(priceAfterDiscount * item.quantity)?.toLocaleString()}
+                      {discountedPrice
+                        ? (discountedPrice * item.quantity)?.toLocaleString()
+                        : (item.original_price * item.quantity)?.toLocaleString()}
                     </span>
                   </div>
                 </li>
@@ -59,9 +72,9 @@ const page = () => {
             Total: Rs.{" "}
             {cart
               .reduce((total, item) => {
-                const priceAfterDiscount =
-                  item.discount !== 0 && Math.round(item.originalPrice - (item.discount * item.originalPrice) / 100);
-                return total + priceAfterDiscount * item.quantity;
+                const discountedPrice =
+                  item.discount !== 0 && Math.round(item.original_price - (item.discount * item.original_price) / 100);
+                return total + discountedPrice * item.quantity;
               }, 0)
               .toLocaleString()}
           </h2>
