@@ -1,6 +1,7 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { generate500x500URL, generateThumbnailURL } from "@/lib/utils";
 import { revalidateTag, unstable_cache } from "next/cache";
 
 /**
@@ -111,7 +112,10 @@ const getProductsPaginated = unstable_cache(
           if (!imagesByProduct[image.product_id]) {
             imagesByProduct[image.product_id] = [];
           }
-          imagesByProduct[image.product_id].push(image);
+          const resized_thumb = generateThumbnailURL(image.key);
+          const resized_500x500 = generate500x500URL(image.key);
+
+          imagesByProduct[image.product_id].push({ ...image, resized_thumb, resized_500x500 });
         });
 
         // Add images to products

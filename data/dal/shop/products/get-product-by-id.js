@@ -1,6 +1,7 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { generate500x500URL, generateThumbnailURL } from "@/lib/utils";
 import { unstable_cache } from "next/cache";
 
 /**
@@ -74,15 +75,29 @@ export const getProductById = unstable_cache(
 
       // Get product images
       const imagesResult = await query("SELECT * FROM shop_images WHERE product_id = $1 ORDER BY position", [productId]);
+      const imagesWithSizes = imagesResult.rows.map((image) => {
+        const resized_thumb = generateThumbnailURL(image.key);
+        const resized_500x500 = generate500x500URL(image.key);
+        return {
+          ...image,
+          resized_thumb,
+          resized_500x500,
+        };
+      });
+
+      const discount =
+        productResult.rows[0]?.discount > 0 && (productResult.rows[0]?.discount / 100) * productResult.rows[0]?.original_price;
+      const discountedPrice = parseInt(discount && productResult.rows[0]?.original_price - discount);
 
       return {
         success: true,
         product: {
           ...product,
+          discounted_price: discountedPrice,
           sizes: sizesResult.rows,
           designs: designsResult.rows,
           pieces: piecesResult.rows,
-          images: imagesResult.rows,
+          images: imagesWithSizes,
         },
       };
     } catch (error) {
