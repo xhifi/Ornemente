@@ -1,5 +1,5 @@
 "use server";
-import { getClient, query } from "@/lib/db";
+import { query } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { products as cache_key_products, product as cache_key_product } from "@/cache_keys";
 /**
@@ -9,11 +9,10 @@ import { products as cache_key_products, product as cache_key_product } from "@/
  */
 const submitOrder = async (orderData) => {
   // Get client for transaction
-  const client = await getClient();
 
   try {
     // Begin transaction
-    await client.query("BEGIN");
+    await query("BEGIN");
 
     // Extract order details
     const {
@@ -39,7 +38,7 @@ const submitOrder = async (orderData) => {
     // 1. Insert the order
     const {
       rows: [order],
-    } = await client.query(
+    } = await query(
       `
       INSERT INTO shop_orders (
         user_id,
@@ -85,7 +84,7 @@ const submitOrder = async (orderData) => {
 
     // 2. Insert order items
     for (const item of order_items) {
-      await client.query(
+      await query(
         `
         INSERT INTO shop_order_items (
           order_id,
@@ -118,7 +117,7 @@ const submitOrder = async (orderData) => {
 
       // 3. Update stock
       try {
-        await client.query(
+        await query(
           `
           UPDATE shop_product_sizes
           SET stock = stock - $1
@@ -140,7 +139,7 @@ const submitOrder = async (orderData) => {
     }
 
     // 4. Commit the transaction
-    await client.query("COMMIT");
+    await query("COMMIT");
 
     // 5. Revalidate relevant paths
     revalidateTag(cache_key_products);
@@ -158,7 +157,7 @@ const submitOrder = async (orderData) => {
     };
   } catch (error) {
     // Rollback transaction if anything fails
-    await client.query("ROLLBACK");
+    await query("ROLLBACK");
     console.error("Order creation error:", error);
 
     return {
@@ -166,9 +165,6 @@ const submitOrder = async (orderData) => {
       message: "Failed to create order",
       error: error.message,
     };
-  } finally {
-    // Release the client back to the pool
-    client.release();
   }
 };
 

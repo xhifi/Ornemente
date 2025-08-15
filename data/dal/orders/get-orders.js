@@ -15,12 +15,10 @@ const getOrders = unstable_cache(
 
       // Get total count for pagination metadata
       const countResult = await query("SELECT COUNT(*) as total FROM shop_orders");
-      const totalOrders = parseInt(countResult.rows[0]?.total || "0");
+      const total = parseInt(countResult.rows[0]?.total || "0");
 
       // Calculate pagination metadata
-      const totalPages = Math.ceil(totalOrders / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
+      const totalPages = Math.ceil(total / limit);
 
       if (orders.rowCount === 0) {
         return {
@@ -29,10 +27,8 @@ const getOrders = unstable_cache(
           metadata: {
             page,
             limit,
-            totalOrders,
+            total,
             totalPages,
-            hasNextPage,
-            hasPrevPage,
           },
           error: null,
         };
@@ -44,7 +40,7 @@ const getOrders = unstable_cache(
         metadata: {
           page,
           limit,
-          totalOrders,
+          total,
           totalPages,
           hasNextPage,
           hasPrevPage,

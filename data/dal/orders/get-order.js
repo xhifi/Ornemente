@@ -27,7 +27,7 @@ export async function getOrder(id) {
     );
 
     if (!order) {
-      return null;
+      throw new Error("Order not found");
     }
 
     // Get the order items

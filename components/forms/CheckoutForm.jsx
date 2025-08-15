@@ -123,13 +123,6 @@ export default function CheckoutForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState(250); // Default shipping cost
 
-  // Calculate subtotal, tax, and total
-  const subtotal = cart.reduce((total, item) => {
-    const discountedPrice =
-      item.discount > 0 ? Math.round(item.original_price - (item.discount * item.original_price) / 100) : item.original_price;
-    return total + discountedPrice * item.quantity;
-  }, 0);
-
   const taxRate = 0.18; // 18% tax rate
   const taxAmount = totalPrice * taxRate;
   const totalAmount = totalPrice + taxAmount + shippingCost;
@@ -265,16 +258,11 @@ export default function CheckoutForm() {
       const result = await submitOrder(order);
 
       if (result && result.success) {
-        // Clear the cart
-        clearCart();
-
-        // Show success message
+        router.push(`/shop/orders/confirmation/${result.id}`);
         toast.success("Order placed successfully!", {
           description: `Order #${result.order_number} has been created.`,
         });
-
-        // Redirect to order confirmation page
-        router.push(`/shop/orders/confirmation/${result.id}`);
+        return clearCart();
       } else {
         throw new Error(result?.message || "Something went wrong. Please try again.");
       }
