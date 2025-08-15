@@ -5,7 +5,7 @@ import ProductCardCartButton from "./ProductCardCartButton";
 const ProductCard = ({ product }) => {
   const discount = product?.discount > 0 && (product?.discount / 100) * product?.original_price;
   const discountedPrice = parseInt(discount && product?.original_price - discount);
-  console.log(product);
+
   return (
     <div className="group border-background/25">
       <div className="w-full relative">
@@ -14,7 +14,7 @@ const ProductCard = ({ product }) => {
           width={500}
           height={700}
           alt={`${product.name}-${product.id}`}
-          className="border-primary w-full object-cover"
+          className="border-primary w-full aspect-[9/13] object-cover object-center"
         />
         <ProductCardCartButton product={product} />
         {product.discount > 0 && (

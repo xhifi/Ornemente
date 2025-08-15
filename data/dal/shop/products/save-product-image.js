@@ -3,17 +3,34 @@
 import { query } from "@/lib/db";
 import { revalidateTag } from "next/cache";
 import { uploadFile, deleteFile, listFiles } from "@/lib/minio";
-import path from "path";
-
 import sharp from "sharp";
+import path from "path";
+import { product as cache_key_product, products as cache_key_products } from "@/cache_keys";
 
 export const makeThumbnail = async (fileBuffer) => {
-  const thumbnailBuffer = await sharp(fileBuffer).resize(100, 100).sharpen().toFormat("jpeg").jpeg({ quality: 80 }).toBuffer();
+  const thumbnailBuffer = await sharp(fileBuffer)
+    .resize(100, 100, {
+      fit: sharp.fit.inside,
+      withoutEnlargement: true,
+    })
+    .sharpen()
+    .toFormat("jpeg")
+    .jpeg({ quality: 60 })
+    .toBuffer();
+
   return thumbnailBuffer;
 };
 
 export const resizeImage = async (fileBuffer, width, height, format = "jpeg", quality = 80) => {
-  const resizedBuffer = await sharp(fileBuffer).resize(width, height).sharpen().toFormat(format).jpeg({ quality }).toBuffer();
+  const resizedBuffer = await sharp(fileBuffer)
+    .resize(width, height, {
+      fit: sharp.fit.inside,
+      withoutEnlargement: true,
+    })
+    .sharpen()
+    .toFormat(format)
+    .jpeg({ quality })
+    .toBuffer();
   return resizedBuffer;
 };
 
@@ -35,7 +52,7 @@ const saveProductImage = async ({ productId = 0, folder = "products/", file }) =
 
     const [thumbnailBuffer, resized500x500] = await Promise.all([
       await makeThumbnail(fileBuffer),
-      await resizeImage(fileBuffer, 500, 500, "jpeg", 80),
+      await resizeImage(fileBuffer, 500, 500, "jpeg", 60),
     ]);
 
     const [uploadSrc, uploadThumb, uploadResize] = await Promise.all([
@@ -47,6 +64,27 @@ const saveProductImage = async ({ productId = 0, folder = "products/", file }) =
       await query(`ROLLBACK`);
       throw new Error("Failed to upload one or more files");
     }
+
+    // Create size variations as a JSON string for JSONB column
+    const sizeVariationsJson = JSON.stringify({
+      thumbnail: {
+        path: uploadThumb.url,
+        key: thumbPath,
+        width: 100,
+        height: 100,
+        format: "jpeg",
+        size: thumbnailBuffer.length,
+      },
+      resized500x500: {
+        path: uploadResize.url,
+        key: resize500x500Path,
+        width: 500,
+        height: 500,
+        format: "jpeg",
+        size: resized500x500.length,
+      },
+    });
+
     const recordInDB = await query(
       `INSERT INTO shop_images
         (product_id, 
@@ -54,16 +92,19 @@ const saveProductImage = async ({ productId = 0, folder = "products/", file }) =
         key,
         name, 
         mime_type,
-        size) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [productId, uploadSrc.url, filePath, file.name, file.type, fileSize]
+        size,
+        size_variations) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb) RETURNING *`,
+      [productId, uploadSrc.url, filePath, file.name, file.type, fileSize, sizeVariationsJson]
     );
     if (!recordInDB || recordInDB.rowCount === 0) {
       await query(`ROLLBACK`);
-      await Promise.all([await deleteFile(filePath), await deleteFile(thumbPath), await deleteFile(resize500x500Path)]);
+      // Clean up all uploaded files
+      await Promise.all([deleteFile(filePath), deleteFile(thumbPath), deleteFile(resize500x500Path)]);
       throw new Error("Failed to save image record in database");
     }
     console.log(`Image uploaded and saved to database: ${filePath}`);
-    revalidateTag("shop-files"); // Revalidate cache for shop files
+    revalidateTag(cache_key_product(recordInDB.rows[0].product_id));
+    revalidateTag(cache_key_products);
 
     await query(`COMMIT`);
 
@@ -71,8 +112,11 @@ const saveProductImage = async ({ productId = 0, folder = "products/", file }) =
       key: recordInDB.rows[0].key,
       url: recordInDB.rows[0].path,
       name: recordInDB.rows[0].name,
-      thumbnailUrl: uploadThumb.url,
-      resized500x500Url: uploadResize.url,
+      id: recordInDB.rows[0].id,
+      size_variations: recordInDB.rows[0].size_variations || {
+        thumbnail: { path: uploadThumb.url },
+        medium: { path: uploadResize.url },
+      },
     };
   } catch (error) {
     console.error("Error processing image upload:", error);

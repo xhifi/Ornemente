@@ -7,7 +7,7 @@ import ProductCard from "@/components/ui/factory/product-cards/ProductCard";
 import getProductsPaginated from "@/data/dal/shop/products/get-all-products-paginated";
 
 export default async function Home() {
-  const products = await getProductsPaginated({ limit: 10, offset: 0 });
+  const products = await getProductsPaginated({ limit: 20, offset: 0, filters: { published_status: "published" } });
 
   return (
     <div className="dark">
@@ -33,7 +33,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="mx-auto px-4 py-8">
+      <div className="mx-auto px-4 py-8 max-w-[1920px]">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 grid-flow-row">
           {products.products.map((product) => {
             return <ProductCard product={product} key={product.id} />;

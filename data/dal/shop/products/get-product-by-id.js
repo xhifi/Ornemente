@@ -3,14 +3,15 @@
 import { query } from "@/lib/db";
 import { generate500x500URL, generateThumbnailURL } from "@/lib/utils";
 import { unstable_cache } from "next/cache";
+import { product as cache_key_product, products as cache_key_products } from "@/cache_keys";
 
 /**
  * Get a product by ID with all its related data
  */
-export const getProductById = unstable_cache(
-  async (productId) => {
-    try {
-      // Get product basic information with related sex, type, and brand details
+function getProductById(productId) {
+  return unstable_cache(
+    async () => {
+      // all your logic here using productId
       const productResult = await query(
         `
         SELECT 
@@ -35,7 +36,6 @@ export const getProductById = unstable_cache(
 
       const product = productResult.rows[0];
 
-      // Get product sizes
       const sizesResult = await query(
         `SELECT ps.*, s.code, s.label 
         FROM shop_product_sizes ps
@@ -44,7 +44,6 @@ export const getProductById = unstable_cache(
         [productId]
       );
 
-      // Get product designs
       const designsResult = await query(
         `SELECT d.* 
         FROM shop_product_designs pd
@@ -53,7 +52,6 @@ export const getProductById = unstable_cache(
         [productId]
       );
 
-      // Get product pieces with color and fabric details
       const piecesResult = await query(
         `
         SELECT 
@@ -73,7 +71,6 @@ export const getProductById = unstable_cache(
         [productId]
       );
 
-      // Get product images
       const imagesResult = await query("SELECT * FROM shop_images WHERE product_id = $1 ORDER BY position", [productId]);
       const imagesWithSizes = imagesResult.rows.map((image) => {
         const resized_thumb = generateThumbnailURL(image.key);
@@ -85,9 +82,8 @@ export const getProductById = unstable_cache(
         };
       });
 
-      const discount =
-        productResult.rows[0]?.discount > 0 && (productResult.rows[0]?.discount / 100) * productResult.rows[0]?.original_price;
-      const discountedPrice = parseInt(discount && productResult.rows[0]?.original_price - discount);
+      const discount = product.discount > 0 && (product.discount / 100) * product.original_price;
+      const discountedPrice = parseInt(discount && product.original_price - discount);
 
       return {
         success: true,
@@ -100,16 +96,13 @@ export const getProductById = unstable_cache(
           images: imagesWithSizes,
         },
       };
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      return { error: error.message || "Unknown database error" };
+    },
+    [cache_key_product(productId), cache_key_products], // cache key
+    {
+      tags: [cache_key_product(productId), cache_key_products],
+      revalidate: 3600,
     }
-  },
-  ["product"],
-  {
-    tags: ["product", "products"],
-    revalidate: 30, // Cache for 30 seconds
-  }
-);
+  )();
+}
 
 export default getProductById;

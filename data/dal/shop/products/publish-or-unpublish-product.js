@@ -3,34 +3,42 @@
 import getProductById from "./get-product-by-id";
 import { query } from "@/lib/db";
 import { revalidateTag } from "next/cache";
+import { product as cache_key_product, products as cache_key_products } from "@/cache_keys";
 
-const publishOrUnpublishProduct = async (productId, action) => {
+const publishOrUnpublishProduct = async (productId, action = true) => {
   try {
-    // Validate action
-    if (action !== "publish" && action !== "unpublish") {
-      throw new Error("Invalid action. Use 'publish' or 'unpublish'.");
+    if (!productId) {
+      throw new Error("Product ID is required");
     }
-
-    // Find the product
     const product = await getProductById(productId);
-    if (!product) {
-      throw new Error("Product not found.");
+    console.log(product);
+    if (!product || !product.success) {
+      throw new Error("Product not found or invalid ID");
     }
-
-    // Update the product's published status
-    await query`
-            UPDATE products
-            SET published = ${action === "publish"}
-            WHERE id = ${productId}
-        `;
-
-    // Revalidate the product's cache
-    revalidateTag(`product:${productId}`);
-
-    return product;
+    const status = action ? "published" : "draft";
+    const result = await query(
+      `
+      UPDATE shop_products
+      SET publish_status = $1
+      WHERE id = $2
+      RETURNING id;
+    `,
+      [status, productId]
+    );
+    if (result.rowCount === 0) {
+      throw new Error("Failed to update product status");
+    }
+    revalidateTag(cache_key_product(productId));
+    revalidateTag(cache_key_products);
+    return { success: true, data: { id: productId, status }, error: null };
   } catch (error) {
     console.error("Error publishing/unpublishing product:", error);
-    throw new Error("Failed to publish/unpublish product.");
+    return {
+      success: false,
+      data: null,
+      error: error.message,
+    };
   }
 };
+
 export default publishOrUnpublishProduct;

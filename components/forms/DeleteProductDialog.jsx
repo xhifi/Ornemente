@@ -36,7 +36,7 @@ export default function DeleteProductDialog({ productId, productName }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <button className="text-red-600 hover:text-red-900">Delete</button>
+        <button className="text-destructive hover:text-destructive/80">Delete</button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

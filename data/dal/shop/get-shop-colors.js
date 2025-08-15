@@ -1,4 +1,5 @@
 "use server";
+import { colors as cache_key_colors } from "@/cache_keys";
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 
@@ -11,7 +12,7 @@ const getShopColors = unstable_cache(
           return {
             ok: false,
             data: null,
-            error: `${slug} not found in shop colors`,
+            error: `${name} not found in shop colors`,
           };
         }
         return {
@@ -20,7 +21,19 @@ const getShopColors = unstable_cache(
           error: null,
         };
       }
-      const res = await query(`SELECT * FROM shop_colors;`);
+      const res = await query(`
+        SELECT 
+          c.*, 
+          COALESCE(COUNT(DISTINCT sp.product_id), 0)::int AS product_count
+        FROM 
+          shop_colors c
+        LEFT JOIN 
+          shop_pieces sp ON c.id = sp.color
+        GROUP BY 
+          c.id
+        ORDER BY 
+          c.created_at DESC;
+      `);
       if (res.rowCount === 0) {
         return {
           ok: true,
@@ -41,9 +54,9 @@ const getShopColors = unstable_cache(
       };
     }
   },
-  ["shop-colors"],
+  [cache_key_colors],
   {
-    tags: ["shop-colors"],
+    tags: [cache_key_colors],
     revalidate: 60, // Cache for 60 seconds
   }
 );

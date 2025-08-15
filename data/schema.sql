@@ -197,7 +197,7 @@ ALTER SEQUENCE shop_products_id_seq RESTART WITH 1000000;
 -- ========================
 CREATE TABLE shop_pieces (
     id SERIAL PRIMARY KEY,
-    product_id INTEGER NOT NULL REFERENCES shop_products(id),
+    product_id INTEGER NOT NULL REFERENCES shop_products(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
     fabric INTEGER REFERENCES shop_fabrics(id),
@@ -210,15 +210,12 @@ CREATE TABLE shop_pieces (
 
 ALTER SEQUENCE shop_pieces_id_seq RESTART WITH 41;
 
-ALTER TABLE
-    shop_pieces DROP CONSTRAINT shop_pieces_product_id_unique;
-
 -- ========================
 -- shop_product_sizes
 -- ========================
 CREATE TABLE shop_product_sizes (
     id SERIAL PRIMARY KEY,
-    product_id INTEGER REFERENCES shop_products(id),
+    product_id INTEGER REFERENCES shop_products(id) ON DELETE CASCADE,
     size_id VARCHAR(10) REFERENCES shop_sizes(code),
     stock INT NOT NULL DEFAULT 0,
     sku VARCHAR UNIQUE,
@@ -250,7 +247,7 @@ CREATE TABLE shop_designs (
 -- shop_product_designs
 -- ========================
 CREATE TABLE shop_product_designs (
-    product_id INTEGER REFERENCES shop_products(id),
+    product_id INTEGER REFERENCES shop_products(id) ON DELETE CASCADE,
     design_id INTEGER REFERENCES shop_designs(id),
     PRIMARY KEY (product_id, design_id),
     created_at TIMESTAMP DEFAULT NOW(),
@@ -264,7 +261,8 @@ CREATE TABLE shop_product_designs (
 -- ========================
 CREATE TABLE shop_images (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    product_id INTEGER NOT NULL REFERENCES shop_products(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES shop_products(id) ON DELETE CASCADE,
+    brand_id INTEGER REFERENCES shop_brands(id) ON DELETE CASCADE,
     path TEXT NOT NULL,
     -- Path to the image in the bucket (including folder structure)
     key TEXT NOT NULL,
@@ -283,14 +281,38 @@ CREATE TABLE shop_images (
     -- Image width in pixels
     height INTEGER,
     -- Image height in pixels
+    size_variations JSONB,
+    -- Store size variations of the image (thumbnails, etc.)
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     created_by UUID REFERENCES users(id),
     updated_by UUID REFERENCES users(id)
 );
 
--- Create a unique index on product_id and path to prevent duplicate images
-CREATE UNIQUE INDEX idx_shop_images_product_path ON shop_images(product_id, path);
+-- Create a unique index for product images to prevent duplicates
+CREATE UNIQUE INDEX idx_shop_images_product_path ON shop_images(product_id, path)
+WHERE
+    product_id IS NOT NULL;
+
+-- Create a unique index for brand images to prevent duplicates
+CREATE UNIQUE INDEX idx_shop_images_brand_path ON shop_images(brand_id, path)
+WHERE
+    brand_id IS NOT NULL;
+
+-- Add constraint to ensure either product_id or brand_id is specified
+ALTER TABLE
+    shop_images
+ADD
+    CONSTRAINT chk_shop_images_ref CHECK (
+        (
+            product_id IS NOT NULL
+            AND brand_id IS NULL
+        )
+        OR (
+            product_id IS NULL
+            AND brand_id IS NOT NULL
+        )
+    );
 
 -- Create indexes for efficient querying
 CREATE INDEX idx_shop_images_product_id ON shop_images(product_id);
@@ -374,7 +396,9 @@ $ $ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_shop_types_slug BEFORE
 INSERT
-    ON shop_types FOR EACH ROW EXECUTE FUNCTION set_shop_types_slug();
+    OR
+UPDATE
+    OF name ON shop_types FOR EACH ROW EXECUTE FUNCTION set_shop_types_slug();
 
 -- Trigger for shop_collections
 CREATE
@@ -408,7 +432,7 @@ INSERT
 CREATE
 OR REPLACE FUNCTION set_shop_fabrics_slug() RETURNS TRIGGER AS $ $ BEGIN NEW.slug := slugify(NEW.name);
 
-RETURN NEW;
+- RETURN NEW;
 
 END;
 
@@ -581,6 +605,195 @@ CREATE TRIGGER trg_update_skus_on_product_publish
 AFTER
 UPDATE
     OF publish_status ON shop_products FOR EACH ROW EXECUTE FUNCTION update_skus_on_product_publish();
+
+-- ========================
+-- shop_orders
+-- ========================
+CREATE TYPE order_status AS ENUM (
+    'pending',
+    'processing',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'returned',
+    'refunded'
+);
+
+CREATE TYPE payment_method AS ENUM (
+    'cash_on_delivery',
+    'credit_card',
+    'bank_transfer',
+    'wallet'
+);
+
+CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
+
+-- Order table to track all customer orders
+CREATE TABLE shop_orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(20) UNIQUE NOT NULL,
+    user_id UUID REFERENCES users(id),
+    -- Can be NULL for anonymous orders
+    customer_name TEXT NOT NULL,
+    customer_email TEXT,
+    customer_phone TEXT NOT NULL,
+    billing_address JSONB NOT NULL,
+    -- Structured address data
+    shipping_address JSONB NOT NULL,
+    -- Can be different from billing
+    total_amount DECIMAL(12, 2) NOT NULL,
+    discount_amount DECIMAL(12, 2) DEFAULT 0,
+    shipping_amount DECIMAL(12, 2) DEFAULT 0,
+    tax_amount DECIMAL(12, 2) DEFAULT 0,
+    final_amount DECIMAL(12, 2) NOT NULL,
+    -- After discounts, shipping, tax
+    notes TEXT,
+    -- Customer notes for the order
+    order_status order_status DEFAULT 'pending',
+    payment_method payment_method,
+    payment_status payment_status DEFAULT 'pending',
+    tracking_number TEXT,
+    -- For shipping tracking
+    estimated_delivery_date DATE,
+    actual_delivery_date TIMESTAMP,
+    ip_address TEXT,
+    -- For security/tracking
+    user_agent TEXT,
+    -- Browser info
+    metadata JSONB,
+    -- Additional data that doesn't fit elsewhere
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    updated_by UUID REFERENCES users(id)
+);
+
+-- Table for individual order items
+CREATE TABLE shop_order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES shop_orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES shop_products(id),
+    product_sku VARCHAR REFERENCES shop_product_sizes(sku),
+    product_name TEXT NOT NULL,
+    -- Store name at time of purchase
+    size_code VARCHAR(10) REFERENCES shop_sizes(code),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(12, 2) NOT NULL,
+    discount_amount DECIMAL(12, 2) DEFAULT 0,
+    total_price DECIMAL(12, 2) NOT NULL,
+    -- unit_price * quantity - discount
+    product_data JSONB,
+    -- Snapshot of product data at time of purchase
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table for order status history
+CREATE TABLE shop_order_status_history (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES shop_orders(id) ON DELETE CASCADE,
+    status order_status NOT NULL,
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    created_by UUID REFERENCES users(id)
+);
+
+-- Table for payment transactions
+CREATE TABLE shop_payment_transactions (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES shop_orders(id) ON DELETE CASCADE,
+    transaction_id TEXT,
+    -- Payment gateway transaction ID
+    amount DECIMAL(12, 2) NOT NULL,
+    payment_method payment_method,
+    payment_status payment_status,
+    gateway_response JSONB,
+    -- Response from payment gateway
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Function to generate a unique order number
+CREATE
+OR REPLACE FUNCTION generate_order_number() RETURNS TRIGGER AS $ $ BEGIN -- Format: YYMMDDxxxxx (year, month, day, and 5-digit sequence)
+NEW.order_number := TO_CHAR(NOW(), 'YYMMDD') || LPAD(NEXTVAL('shop_orders_id_seq') :: TEXT, 5, '0');
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Trigger to automatically generate order number before insert
+CREATE TRIGGER trg_generate_order_number BEFORE
+INSERT
+    ON shop_orders FOR EACH ROW EXECUTE FUNCTION generate_order_number();
+
+-- Function to automatically add the initial status to history
+CREATE
+OR REPLACE FUNCTION add_initial_order_status() RETURNS TRIGGER AS $ $ BEGIN
+INSERT INTO
+    shop_order_status_history (order_id, status, comment)
+VALUES
+    (NEW.id, NEW.order_status, 'Order created');
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Trigger to automatically add the initial status
+CREATE TRIGGER trg_add_initial_order_status
+AFTER
+INSERT
+    ON shop_orders FOR EACH ROW EXECUTE FUNCTION add_initial_order_status();
+
+-- Function to update order history when status changes
+CREATE
+OR REPLACE FUNCTION update_order_status_history() RETURNS TRIGGER AS $ $ BEGIN IF OLD.order_status <> NEW.order_status THEN
+INSERT INTO
+    shop_order_status_history (order_id, status, comment, created_by)
+VALUES
+    (
+        NEW.id,
+        NEW.order_status,
+        'Status updated from ' || OLD.order_status || ' to ' || NEW.order_status,
+        NEW.updated_by
+    );
+
+END IF;
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Trigger to track order status changes
+CREATE TRIGGER trg_update_order_status_history
+AFTER
+UPDATE
+    OF order_status ON shop_orders FOR EACH ROW EXECUTE FUNCTION update_order_status_history();
+
+-- Indexes for order tables
+CREATE INDEX idx_shop_orders_user_id ON shop_orders(user_id);
+
+CREATE INDEX idx_shop_orders_order_status ON shop_orders(order_status);
+
+CREATE INDEX idx_shop_orders_payment_status ON shop_orders(payment_status);
+
+CREATE INDEX idx_shop_orders_created_at ON shop_orders(created_at);
+
+CREATE INDEX idx_shop_order_items_order_id ON shop_order_items(order_id);
+
+CREATE INDEX idx_shop_order_items_product_id ON shop_order_items(product_id);
+
+CREATE INDEX idx_shop_order_items_product_sku ON shop_order_items(product_sku);
+
+CREATE INDEX idx_shop_order_status_history_order_id ON shop_order_status_history(order_id);
+
+CREATE INDEX idx_shop_payment_transactions_order_id ON shop_payment_transactions(order_id);
 
 -- ========================
 -- Indexes (additional to PKs)

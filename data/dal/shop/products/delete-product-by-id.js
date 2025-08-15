@@ -2,6 +2,7 @@
 
 import { query } from "@/lib/db";
 import { revalidateTag } from "next/cache";
+import { products as cache_key_products, product as cache_key_product } from "@/cache_keys";
 
 /**
  * Delete a product by ID
@@ -44,8 +45,8 @@ export async function deleteProductByID(productId) {
       await query("COMMIT");
 
       // Revalidate the cache for products
-      revalidateTag("product");
-      revalidateTag("products");
+      revalidateTag(cache_key_product(productId));
+      revalidateTag(cache_key_products);
 
       return {
         success: true,

@@ -5,17 +5,12 @@ import getProductById from "@/data/dal/shop/products/get-product-by-id";
 const SKUPage = async ({ params }) => {
   const id = (await params).id;
   const { product } = await getProductById(id);
-  const discount = product?.discount > 0 && (product?.discount / 100) * product?.original_price;
-  const discountedPrice = parseInt(discount && product?.original_price - discount);
-
-  console.log(product);
 
   return (
     <div className="px-6 py-12 max-w-screen-xl mx-auto">
       <div className="flex gap-12 flex-nowrap flex-col md:flex-row">
         <div className="md:w-1/2 w-full">
           <div className="h-full relative">
-            {/* <Image src={product.coverImage} width={700} height={700} alt="" className="w-auto h-full block" /> */}
             <ImageSlideshow images={product.images} />
 
             <span className="bg-destructive text-secondary absolute top-6 right-6 px-3 py-1.5 text-sm rounded-full">
@@ -32,17 +27,15 @@ const SKUPage = async ({ params }) => {
               {product.discount > 0 ? (
                 <>
                   <span className="line-through text-xl text-black">Rs {product.original_price.toLocaleString()}</span>
-                  <span className="text-3xl text-destructive ms-2">Rs {discountedPrice.toLocaleString()}</span>
+                  <span className="text-3xl text-destructive ms-2">Rs {product.discounted_price.toLocaleString()}</span>
                 </>
               ) : (
                 <span className="text-foreground/75 text-3xl">Rs {product.original_price.toLocaleString()}</span>
               )}
             </p>
-            <p>SKU: {product.sku}</p>
 
             <AddToCartButton product={product} />
 
-            <p className="text-destructive animate-pulse">Only {product.remainingStock} left in stock</p>
             {product.tagline && product.tagline !== "" && <p>{product.tagline}</p>}
 
             <div>

@@ -2,6 +2,7 @@
 
 import { query } from "@/lib/db";
 import { revalidateTag } from "next/cache";
+import { products as cache_key_products, product as cache_key_product } from "@/cache_keys";
 
 /**
  * Create a new product with minimal information
@@ -33,7 +34,8 @@ export async function createProduct(productData) {
     }
 
     // Revalidate the cache for products
-    revalidateTag("products");
+    revalidateTag(cache_key_product(productData.id));
+    revalidateTag(cache_key_products);
 
     return {
       success: true,

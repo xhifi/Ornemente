@@ -3,6 +3,7 @@
 import { deleteFile, listFiles } from "@/lib/minio";
 import { query } from "@/lib/db"; // Assuming you have a query function to interact with your database
 import { revalidateTag } from "next/cache";
+import { product as cache_key_product, products as cache_key_products } from "@/cache_keys";
 
 const deleteProductImage = async (imageKey) => {
   if (!imageKey) {
@@ -50,8 +51,8 @@ const deleteProductImage = async (imageKey) => {
     }
     await query(`COMMIT`);
 
-    revalidateTag("product");
-    revalidateTag("products");
+    revalidateTag(cache_key_product(existsInDb.rows[0].product_id));
+    revalidateTag(cache_key_products);
 
     return { ok: true, data: deletedFromMinio, error: null };
   } catch (error) {

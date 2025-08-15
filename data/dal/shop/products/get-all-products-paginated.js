@@ -3,12 +3,23 @@
 import { query } from "@/lib/db";
 import { generate500x500URL, generateThumbnailURL } from "@/lib/utils";
 import { revalidateTag, unstable_cache } from "next/cache";
-
+import { products as cache_key_products } from "@/cache_keys";
 /**
  * Get all products with pagination
+ * @param {Object} options - Options for pagination, filtering and searching
+ * @param {number} [options.page=1] - The page number to fetch
+ * @param {number} [options.limit=20] - Number of products per page
+ * @param {string} [options.search=""] - Search term for product name and description
+ * @param {Object} [options.filters={}] - Filter options
+ * @param {number|number[]} [options.filters.sex] - Filter by sex/gender ID
+ * @param {number|number[]} [options.filters.type] - Filter by product type ID or array of IDs
+ * @param {number|number[]} [options.filters.brand] - Filter by brand ID or array of IDs
+ * @param {string|string[]} [options.filters.publish_status] - Filter by publication status ("draft" or "published")
+ * @param {string|string[]} [options.filters.published_status] - Alternative to publish_status
+ * @returns {Promise<Object>} - Products with pagination details
  */
 const getProductsPaginated = unstable_cache(
-  async ({ page = 1, limit = 10, search = "", filters = {} } = {}) => {
+  async ({ page = 1, limit = 20, search = "", filters = {} } = {}) => {
     try {
       const offset = (page - 1) * limit;
       const params = [];
@@ -66,10 +77,15 @@ const getProductsPaginated = unstable_cache(
         paramIndex++;
       }
 
-      if (filters.publish_status) {
-        queryText += ` AND p.publish_status = $${paramIndex}`;
-        params.push(filters.publish_status);
-        paramIndex++;
+      // Handle product publish status filter - accepts both publish_status and published_status for flexibility
+      // Valid values are 'draft' or 'published' as per the database schema constraint
+      if (filters.publish_status || filters.published_status) {
+        const status = filters.publish_status || filters.published_status;
+        if (status === "published" || status === "draft") {
+          queryText += ` AND p.publish_status = $${paramIndex}`;
+          params.push(status);
+          paramIndex++;
+        }
       }
 
       // Add order and pagination
@@ -88,17 +104,7 @@ const getProductsPaginated = unstable_cache(
       if (productIds.length > 0) {
         const imagesQuery = `
         SELECT 
-          id, 
-          product_id, 
-          path, 
-          key, 
-          name, 
-          selected, 
-          position,
-          mime_type,
-          size,
-          width,
-          height
+          *
         FROM shop_images
         WHERE product_id = ANY($1)
         ORDER BY product_id, position
@@ -118,12 +124,38 @@ const getProductsPaginated = unstable_cache(
           imagesByProduct[image.product_id].push({ ...image, resized_thumb, resized_500x500 });
         });
 
-        // Add images to products
-        productsWithImages = productsWithImages.map((product) => ({
-          ...product,
-          images: imagesByProduct[product.id] || [],
-          featured_image: (imagesByProduct[product.id] || []).find((img) => img.selected) || (imagesByProduct[product.id] || [])[0] || null,
-        }));
+        // Add images and calculate totalDiscountAmount for products
+        productsWithImages = productsWithImages.map((product) => {
+          // Handle null/undefined values with defaults
+          const hasOriginalPrice = product.original_price !== null && product.original_price !== undefined;
+          const hasDiscount = product.discount !== null && product.discount !== undefined;
+
+          // Calculate prices only if we have valid data
+          let totalDiscountAmount = 0;
+          let finalPrice = 0;
+
+          if (hasOriginalPrice) {
+            const originalPrice = parseFloat(product.original_price) || 0;
+            const discountPercentage = hasDiscount ? parseFloat(product.discount) || 0 : 0;
+
+            // Calculate discount and final price
+            totalDiscountAmount = originalPrice * (discountPercentage / 100);
+            finalPrice = originalPrice - totalDiscountAmount;
+
+            // Round to 2 decimal places
+            totalDiscountAmount = parseFloat(totalDiscountAmount.toFixed(2));
+            finalPrice = parseFloat(finalPrice.toFixed(2));
+          }
+
+          return {
+            ...product,
+            images: imagesByProduct[product.id] || [],
+            featured_image:
+              (imagesByProduct[product.id] || []).find((img) => img.selected) || (imagesByProduct[product.id] || [])[0] || null,
+            totalDiscountAmount,
+            finalPrice,
+          };
+        });
       }
 
       // Get total count for pagination - reuse the same WHERE conditions
@@ -172,10 +204,14 @@ const getProductsPaginated = unstable_cache(
         countParamIndex++;
       }
 
-      if (filters.publish_status) {
-        countQuery += ` AND p.publish_status = $${countParamIndex}`;
-        countParams.push(filters.publish_status);
-        countParamIndex++;
+      // Handle product publish status filter for count query
+      if (filters.publish_status || filters.published_status) {
+        const status = filters.publish_status || filters.published_status;
+        if (status === "published" || status === "draft") {
+          countQuery += ` AND p.publish_status = $${countParamIndex}`;
+          countParams.push(status);
+          countParamIndex++;
+        }
       }
 
       const countResult = await query(countQuery, countParams);
@@ -197,9 +233,10 @@ const getProductsPaginated = unstable_cache(
       return { error: error.message || "Unknown database error" };
     }
   },
+  [cache_key_products],
   {
-    tags: ["products", "product"],
-    revalidate: 30, // Revalidate every 30 seconds
+    tags: [cache_key_products],
+    revalidate: 3600, // Revalidate every 5 minutes
   }
 );
 

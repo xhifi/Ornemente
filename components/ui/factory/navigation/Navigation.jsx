@@ -40,7 +40,7 @@ const Navigation = () => {
           href="/dashboard"
           className={`bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/80 transition-colors`}
         >
-          Login
+          Dashboard
         </Link>
         <CartButton />
       </div>

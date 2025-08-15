@@ -4,6 +4,7 @@ import React, { useRef, useEffect } from "react";
 import { Splide, SplideSlide, SplideTrack } from "@splidejs/react-splide";
 import "@splidejs/react-splide/css";
 import Image from "next/image";
+import { ImageZoom } from "./image-zoom";
 
 /**
  * Image Slideshow Component with synchronized thumbnails
@@ -27,15 +28,7 @@ import Image from "next/image";
  * @param {number} props.interval - Autoplay interval in milliseconds
  * @param {string} props.className - Additional CSS classes
  */
-const ImageSlideshow = ({
-  images = [],
-  height = "700px",
-  thumbsHeight = "400px",
-  arrows = true,
-  autoplay = false,
-  interval = 3000,
-  className = "",
-}) => {
+const ImageSlideshow = ({ images = [], height = "700px", arrows = true, autoplay = false, interval = 3000, className = "" }) => {
   // Create refs for the sliders
   const mainRef = useRef(null);
   const thumbsRef = useRef(null);
@@ -158,16 +151,18 @@ const ImageSlideshow = ({
             <SplideTrack>
               {images.map((image, index) => (
                 <SplideSlide key={`main-${image.id || image.src}`}>
-                  <div className="h-full w-full bg-secondary">
+                  <ImageZoom className={"h-full"}>
                     <Image
                       src={image.path}
+                      placeholder="blur"
+                      blurDataURL={image.path}
                       alt={`product ${index} preview image`}
-                      width={400}
-                      height={700}
-                      className="w-full h-full object-cover"
+                      width={1920}
+                      height={1080}
+                      className="w-full h-full object-cover object-center"
                       draggable="false"
                     />
-                  </div>
+                  </ImageZoom>
                 </SplideSlide>
               ))}
             </SplideTrack>

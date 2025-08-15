@@ -45,10 +45,10 @@ export default async function EditProductPage({ params }) {
   // Extract product's existing designs, sizes and images from the product result
   const existingDesigns = product.designs || [];
   const existingSizes = product.sizes || [];
-  console.log(product);
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Product: {product.name}</h1>
+    <div className="max-w-full overflow-x-hidden">
+      <h1 className="text-2xl font-bold tracking-tight">Edit Product: {product.name}</h1>
 
       <UpdateProductForm
         product={product}

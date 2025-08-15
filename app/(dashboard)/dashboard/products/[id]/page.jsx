@@ -1,4 +1,5 @@
 import getProductById from "@/data/dal/shop/products/get-product-by-id";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic"; // Force dynamic rendering for this page
 
@@ -15,8 +16,8 @@ const ProductViewPage = async ({ params }) => {
         <li>Product Price: {product.price}</li>
         <li>Product Stock: {product.stock}</li>
         <li>Product Category: {product.category}</li>
-        <li>Product Created At: {product.created_at}</li>
-        <li>Product Updated At: {product.updated_at}</li>
+        <li>Product Created At: {new Date(product.created_at).toLocaleString()}</li>
+        <li>Product Updated At: {new Date(product.updated_at).toLocaleString()}</li>
       </ul>
       <div>
         <h2>Product Designs</h2>
@@ -44,11 +45,21 @@ const ProductViewPage = async ({ params }) => {
         <h2>Product Images</h2>
         {product.images && product.images.length > 0 ? (
           <ul>
-            {product.images.map((image) => (
-              <li key={image.id}>
-                <img src={image.path} alt={image.name} className="w-32 h-32 object-cover" />
-              </li>
-            ))}
+            {product.images.map((image) => {
+              return (
+                <li key={image.id}>
+                  <Image
+                    src={`/api/cdn/images/${image.key}`}
+                    placeholder="blur"
+                    blurDataURL={`/api/cdn/images/${image.size_variations.thumbnail.key}`}
+                    width={500}
+                    height={750}
+                    alt={image.name}
+                    className="h-64 w-auto object-cover"
+                  />
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p>No images available for this product.</p>

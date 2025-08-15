@@ -449,3 +449,68 @@ SELECT
     *
 FROM
     shop_products
+INSERT INTO
+    shop_types (name)
+VALUES
+    ('none');
+
+ALTER TABLE
+    shop_products DROP CONSTRAINT shop_products_type_fkey,
+ADD
+    CONSTRAINT shop_products_type_fkey FOREIGN KEY (type) REFERENCES shop_types(id) ON DELETE CASCADE;
+
+ALTER TABLE
+    shop_products
+ADD
+    CONSTRAINT shop_products_collection_fkey FOREIGN KEY (collection) REFERENCES shop_collections(id);
+
+ALTER TABLE
+    shop_pieces DROP CONSTRAINT shop_pieces_product_id_fkey,
+ADD
+    CONSTRAINT shop_pieces_product_id_fkey FOREIGN KEY (product_id) REFERENCES shop_products(id) ON DELETE CASCADE;
+
+SELECT
+    *
+FROM
+    shop_pieces
+WHERE
+    product_id = 1000018;
+
+SELECT
+    *
+FROM
+    shop_images;
+
+SELECT
+    b.id,
+    b.name,
+    b.created_at,
+    b.updated_at,
+    COUNT(p.id) as product_count,
+    (
+        SELECT
+            i.image_url
+        FROM
+            shop_images i
+        WHERE
+            i.brand_id = b.id
+        ORDER BY
+            i.created_at DESC
+        LIMIT
+            1
+    ) as image_url
+FROM
+    shop_brands b
+    LEFT JOIN shop_products p ON b.id = p.brand
+GROUP BY
+    b.id,
+    b.name,
+    b.created_at,
+    b.updated_at
+ORDER BY
+    b.name ASC;
+
+SELECT
+    *
+FROM
+    shop_orders

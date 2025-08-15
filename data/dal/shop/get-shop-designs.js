@@ -1,32 +1,31 @@
 "use server";
+import { designs as cache_key_designs } from "@/cache_keys";
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 
 const getShopDesigns = unstable_cache(
-  async (slug) => {
+  async () => {
     try {
-      if (slug) {
-        const res = await query(`SELECT * FROM shop_designs WHERE slug = $1;`, [slug]);
-        if (!res.rowCount) {
-          return {
-            ok: false,
-            data: null,
-            error: `${slug} not found in shop designs`,
-          };
-        }
-        return {
-          ok: true,
-          data: res.rows,
-          error: null,
-        };
-      }
-      const res = await query(`SELECT * FROM shop_designs;`);
+      const res = await query(`
+        SELECT 
+          d.id,
+          d.name,
+          d.slug,
+          d.created_at,
+          d.updated_at,
+          COUNT(pd.product_id) as product_count
+        FROM 
+          shop_designs d
+        LEFT JOIN 
+          shop_product_designs pd ON d.id = pd.design_id
+        GROUP BY 
+          d.id, d.name, d.slug, d.created_at, d.updated_at
+        ORDER BY 
+          d.name ASC;
+      `);
+
       if (res.rowCount === 0) {
-        return {
-          ok: true,
-          data: [],
-          error: null,
-        };
+        return { ok: true, data: [], error: null };
       }
       return {
         ok: true,
@@ -34,17 +33,13 @@ const getShopDesigns = unstable_cache(
         error: null,
       };
     } catch (error) {
-      return {
-        ok: false,
-        data: null,
-        error: error.message,
-      };
+      return { ok: false, data: null, error: error.message };
     }
   },
-  ["shop-designs"],
+  [cache_key_designs],
   {
-    tags: ["shop-designs"],
-    revalidate: 60, // Cache for 60 seconds
+    tags: [cache_key_designs],
+    revalidate: 3600, // Cache for 3600 seconds
   }
 );
 

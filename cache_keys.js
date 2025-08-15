@@ -1,0 +1,15 @@
+export const products = "products";
+export const images = "images";
+export const categories = "categories";
+export const brands = "brands";
+export const colors = "colors";
+export const designs = "designs";
+export const fabrics = "fabrics";
+export const sexes = "sexes";
+export const types = "types";
+export const sizes = "sizes";
+export const orders = "orders";
+export const product = (id) => `product-${id}`;
+export const productImages = (productId) => `image-${productId}`;
+export const productCategories = (productId) => `category-${productId}`;
+export const order = (id) => `order-${id}`;

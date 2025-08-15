@@ -14,6 +14,7 @@ import ImageUploader from "@/components/forms/ImageUploader";
 import updateProductSchema from "@/data/dal/schema/update-product-schema";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import deleteProductPiece from "@/data/dal/shop/products/delete-product-piece";
 
 const UpdateProduct = ({
   product,
@@ -227,7 +228,7 @@ const UpdateProduct = ({
           <p className="text-lg font-medium mb-4">Loading product data...</p>
         </div>
       ) : (
-        <form className="py-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="py-8 space-y-6 w-full mx-auto" onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
               <CardTitle>Update Product</CardTitle>
@@ -510,7 +511,19 @@ const UpdateProduct = ({
                       <CardHeader className="p-4">
                         <div className="flex justify-between items-center">
                           <CardTitle className="text-base">Piece #{index + 1}</CardTitle>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => removeProductPiece(index)}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              const result = await deleteProductPiece(product.id, piece.id);
+                              if (result.ok) {
+                                removeProductPiece(index);
+                                return toast.success("Piece removed successfully");
+                              }
+                              toast.error(result.error);
+                            }}
+                          >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                               <path
                                 fillRule="evenodd"

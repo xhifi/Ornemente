@@ -3,6 +3,13 @@
 import { query } from "@/lib/db";
 import getProductById from "./get-product-by-id";
 import { revalidateTag } from "next/cache";
+import {
+  product as cache_key_product,
+  products as cache_key_products,
+  types as cache_key_types,
+  colors as cache_key_colors,
+  brands as cache_key_brands,
+} from "@/cache_keys";
 
 const updateProduct = async (data) => {
   try {
@@ -61,20 +68,24 @@ const updateProduct = async (data) => {
       });
     }
 
-    // Update product pieces
-    if (pieces && pieces.length > 0) {
-      pieces.forEach(async (piece) => {
-        const pieceUpdated = await query(
-          `INSERT INTO shop_pieces (product_id, name, description, fabric, color)
-           VALUES ($1, $2, $3, $4, $5)
-           RETURNING *
-          `,
-          [id, piece.name, piece.description, piece.fabric, piece.color]
-        );
-      });
-    }
-    revalidateTag(`products`);
-    revalidateTag(`product`);
+    // // Update product pieces
+    // if (pieces && pieces.length > 0) {
+    //   pieces.forEach(async (piece) => {
+    //     const pieceUpdated = await query(
+    //       `INSERT INTO shop_pieces (product_id, name, description, fabric, color)
+    //        VALUES ($1, $2, $3, $4, $5)
+    //        RETURNING *
+    //       `,
+    //       [id, piece.name, piece.description, piece.fabric, piece.color]
+    //     );
+    //   });
+    // }
+    revalidateTag(cache_key_product(data.id));
+    revalidateTag(cache_key_products);
+    revalidateTag(cache_key_types);
+    revalidateTag(cache_key_colors);
+    revalidateTag(cache_key_brands);
+
     const productData = await getProductById(id);
     return productData;
   } catch (error) {
