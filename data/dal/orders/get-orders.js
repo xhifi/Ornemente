@@ -42,8 +42,6 @@ const getOrders = unstable_cache(
           limit,
           total,
           totalPages,
-          hasNextPage,
-          hasPrevPage,
         },
         error: null,
       };

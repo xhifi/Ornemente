@@ -7,12 +7,7 @@ const paymentMethods = {
 
 const OrdersPage = async () => {
   const orders = await getOrders();
-  if (!orders.data || orders.data.length === 0)
-    return (
-      <Table>
-        <TableCaption>List of Orders</TableCaption>
-      </Table>
-    );
+  console.log(orders);
 
   return (
     <Table>
