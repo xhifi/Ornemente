@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Splide, SplideSlide } from "@splidejs/react-splide";
 // Import Splide styles - using the default theme for better visibility
 import "@splidejs/react-splide/css";
@@ -96,9 +96,62 @@ const Carousel = ({
     }
   };
 
+  // State to track current slide and total slides
+  const [slideInfo, setSlideInfo] = useState({ current: 1, total: slides.length });
+  // State to track if autoplay is paused
+  const [isPaused, setIsPaused] = useState(!autoplay);
+
+  // Handle slide change to update the custom pagination
+  const handleMove = (splide) => {
+    const currentSlide = splide.index + 1;
+    setSlideInfo({ current: currentSlide, total: slides.length });
+  };
+
+  // Custom navigation handlers
+  const goToPrev = () => {
+    if (splideRef.current && splideRef.current.splide) {
+      splideRef.current.splide.go("<");
+    }
+  };
+
+  const goToNext = () => {
+    if (splideRef.current && splideRef.current.splide) {
+      splideRef.current.splide.go(">");
+    }
+  };
+
+  // Toggle autoplay functionality
+  const toggleAutoplay = () => {
+    if (splideRef.current && splideRef.current.splide) {
+      if (isPaused) {
+        splideRef.current.splide.Components.Autoplay.play();
+      } else {
+        splideRef.current.splide.Components.Autoplay.pause();
+      }
+      setIsPaused(!isPaused);
+    }
+  };
+
+  // Update initial autoplay setting
+  useEffect(() => {
+    if (splideRef.current && splideRef.current.splide) {
+      if (isPaused) {
+        splideRef.current.splide.Components.Autoplay.pause();
+      } else {
+        splideRef.current.splide.Components.Autoplay.play();
+      }
+    }
+  }, [splideRef.current, isPaused]);
+
   return (
     <div className={`carousel-wrapper ${className}`}>
-      <Splide ref={splideRef} options={splideOptions} onMounted={onMountHandler} aria-label="Carousel">
+      <Splide
+        ref={splideRef}
+        options={{ ...splideOptions, pagination: false, arrows: false }}
+        onMounted={onMountHandler}
+        onMove={handleMove}
+        aria-label="Carousel"
+      >
         {slides.map((slide) => (
           <SplideSlide key={slide.id}>
             <div className={`flex items-center justify-center w-full h-full ${slide.bgColor}`} style={{ minHeight: height }}>
@@ -117,12 +170,108 @@ const Carousel = ({
         ))}
       </Splide>
 
+      {/* Custom pagination bar */}
+      <div className="flex items-center justify-center bg-primary-foreground border-b border-t border-secondary">
+        <div className="flex items-center">
+          {/* Previous button */}
+          <button
+            onClick={goToPrev}
+            className="w-8 h-8 flex items-center justify-center transition-all rounded-sm"
+            aria-label="Previous slide"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-secondary"
+            >
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+
+          {/* Slide counter */}
+          <div className="font-medium mx-1 text-sm">
+            <span className="text-secondary">{slideInfo.current}</span>
+            <span className="text-secondary mx-1">/</span>
+            <span className="text-secondary">{slideInfo.total}</span>
+          </div>
+
+          {/* Next button */}
+          <button
+            onClick={goToNext}
+            className="w-8 h-8 flex items-center justify-center transition-all border-r focus:outline-none"
+            aria-label="Next slide"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-secondary"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+
+          {/* Pause/Play button */}
+          <button
+            onClick={toggleAutoplay}
+            className="w-8 h-8 flex items-center justify-center transition-all "
+            aria-label={isPaused ? "Play slideshow" : "Pause slideshow"}
+          >
+            {isPaused ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-secondary"
+              >
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-secondary"
+              >
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
       <style jsx global>{`
         .carousel-wrapper {
           position: relative;
           width: 100%;
           margin: 0 auto;
-          overflow: visible; /* Allow arrows to be visible outside the container */
+          overflow: hidden; /* Keep content within boundaries */
         }
 
         /* Ensure the carousel and track are visible */
@@ -149,56 +298,21 @@ const Carousel = ({
           z-index: 2;
         }
 
-        /* Navigation arrows styling */
-        .splide__arrow {
-          background: rgba(255, 255, 255, 0.8);
-          width: 3rem;
-          height: 3rem;
-          opacity: 1;
-          transition: all 0.3s ease;
-          z-index: 10;
-        }
-
-        .splide__arrow svg {
-          width: 1.5rem;
-          height: 1.5rem;
-          fill: #333;
-        }
-
-        .splide__arrow:hover {
-          background: rgba(255, 255, 255, 1);
-        }
-
-        .splide__arrow--prev {
-          left: ${arrowPosition === "outside" ? "-3.5rem" : "1rem"};
-        }
-
-        .splide__arrow--next {
-          right: ${arrowPosition === "outside" ? "-3.5rem" : "1rem"};
-        }
-
-        /* Pagination dots styling */
-        .splide__pagination {
-          bottom: ${pagination ? "-2rem" : "1rem"};
-        }
-
-        .splide__pagination__page {
-          background: rgba(255, 255, 255, 0.5);
-          margin: 0 0.3rem;
-          transition: all 0.3s ease;
-          transform: scale(1);
-        }
-
-        .splide__pagination__page.is-active {
-          background: white;
-          transform: scale(1.3);
-        }
-
         /* Ensure the track and list are properly sized */
         .splide__track,
         .splide__list {
           width: 100%;
           visibility: visible !important;
+        }
+
+        /* Custom pagination styles */
+        .carousel-wrapper button {
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .carousel-wrapper button:active {
+          transform: translateY(-2px);
         }
       `}</style>
     </div>
