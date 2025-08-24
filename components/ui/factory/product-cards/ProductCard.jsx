@@ -3,9 +3,6 @@ import Link from "next/link";
 import { SpinningText } from "../../spinning-text";
 
 const ProductCard = ({ product }) => {
-  const discount = product?.discount > 0 && (product?.discount / 100) * product?.original_price;
-  const discountedPrice = parseInt(discount && product?.original_price - discount);
-  console.log(product);
   return (
     <div className="group border-background overflow-hidden border-1">
       <div className="w-full relative">
