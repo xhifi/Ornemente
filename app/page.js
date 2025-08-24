@@ -34,7 +34,7 @@ export default async function Home() {
       </div>
 
       <div className="mx-auto px-4 py-8 max-w-[1920px]">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 grid-flow-row">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 grid-flow-row">
           {products.products.map((product) => {
             return <ProductCard product={product} key={product.id} />;
           })}
