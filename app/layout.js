@@ -5,6 +5,7 @@ import Navigation from "@/components/ui/factory/navigation/Navigation";
 import Footer from "@/components/ui/factory/footer/Footer";
 import { CartProvider } from "@/components/providers/CartProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { getServerSession } from "@/lib/auth-actions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,7 +13,7 @@ const geistSans = Geist({
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 const gabarito = Gabarito({
@@ -25,13 +26,15 @@ export const metadata = {
   description: "A clothing store built with Next.js and Tailwind CSS",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const session = await getServerSession();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${gabarito.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
           <CartProvider>
-            <Navigation />
+            <Navigation session={session} />
             {children}
             <Footer />
           </CartProvider>
