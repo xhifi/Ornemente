@@ -1,4 +1,4 @@
-export default function DashboardPage() {
+export default async function DashboardPage() {
   return (
     <>
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
