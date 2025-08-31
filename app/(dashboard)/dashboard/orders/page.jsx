@@ -7,7 +7,6 @@ const paymentMethods = {
 
 const OrdersPage = async () => {
   const orders = await getOrders();
-  console.log(orders);
 
   return (
     <Table>
