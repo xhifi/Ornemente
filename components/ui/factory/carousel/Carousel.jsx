@@ -2,10 +2,16 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Splide, SplideSlide } from "@splidejs/react-splide";
-// Import Splide styles - using the default theme for better visibility
 import "@splidejs/react-splide/css";
-// Import additional styles needed for fade effect
 import "@splidejs/react-splide/css/core";
+
+import SliderImage1 from "@/data/placeholder/nishat_banner_1.webp";
+import SliderImage1_1 from "@/data/placeholder/nishat_banner_1_1.webp";
+import SliderImage2 from "@/data/placeholder/nishat_banner_2.webp";
+import SliderImage3 from "@/data/placeholder/nishat_banner_3.webp";
+import SliderImage4 from "@/data/placeholder/nishat_banner_4.webp";
+import Image from "next/image";
+import Link from "next/link";
 
 /**
  * Carousel component using Splide
@@ -30,18 +36,28 @@ const Carousel = ({
       bgColor: "bg-amber-400",
       title: "Lorem Ipsum Dolor Sit Amet",
       content: ["Lorem ipsum dolor sit amet", "Consectetur adipiscing elit", "Sed do eiusmod tempor incididunt"],
+      images: [SliderImage1_1, SliderImage1],
     },
     {
       id: 2,
       bgColor: "bg-emerald-900",
       title: "Lipsum Amet Dolor Okir",
       content: ["Ut enim ad minim veniam", "Quis nostrud exercitation", "Ullamco laboris nisi ut aliquip"],
+      images: [SliderImage2],
     },
     {
       id: 3,
       bgColor: "bg-fuchsia-700",
       title: "Oogway's Dreams",
       content: ["Yesterday is history", "Tomorrow is a mystery", "But today is a gift"],
+      images: [SliderImage3],
+    },
+    {
+      id: 4,
+      bgColor: "bg-indigo-600",
+      title: "The Final Frontier",
+      content: ["To infinity and beyond", "Space: the final frontier", "These are the voyages of the Starship Enterprise"],
+      images: [SliderImage4],
     },
   ],
   type = "slide",
@@ -50,7 +66,7 @@ const Carousel = ({
   speed = 800,
   arrows = true,
   pagination = true,
-  height = "500px",
+  // height = "700px",
   arrowPosition = "inside",
   className = "",
 }) => {
@@ -70,7 +86,8 @@ const Carousel = ({
     speed: speed,
     rewind: true,
     width: "100%",
-    height: height,
+    // height: height,
+    autoHeight: true,
     focus: "center",
     trimSpace: false, // Don't trim empty spaces to ensure visibility
     updateOnMove: true, // Update classes during transitions
@@ -144,34 +161,43 @@ const Carousel = ({
   }, [splideRef.current, isPaused]);
 
   return (
-    <div className={`carousel-wrapper ${className}`}>
+    <div className={`carousel-wrapper relative w-full overflow-hidden my-0 mx-auto ${className}`}>
       <Splide
         ref={splideRef}
         options={{ ...splideOptions, pagination: false, arrows: false }}
         onMounted={onMountHandler}
         onMove={handleMove}
         aria-label="Carousel"
+        className="opacity-100 visible h-[30rem] md:h-[25rem] lg:h-[calc(100vw_*_0.4)] lg:max-h-[calc(100vh_-_16rem)]"
       >
-        {slides.map((slide) => (
-          <SplideSlide key={slide.id}>
-            <div className={`flex items-center justify-center w-full h-full ${slide.bgColor}`} style={{ minHeight: height }}>
-              <div className="text-center px-8 py-12 w-full">
-                <h2 className="text-4xl font-bold text-white mb-6">{slide.title}</h2>
-                <div className="space-y-4">
-                  {slide.content.map((text, index) => (
-                    <p key={index} className="text-white text-xl">
-                      {text}
-                    </p>
-                  ))}
-                </div>
+        {slides.map((slide) => {
+          return (
+            <SplideSlide
+              key={slide.id}
+              className="d-flex items-center justify-center visible opacity-100 transition-transform duration-500 h-[30rem] ease-in-out md:h-[25rem] lg:h-[calc(100vw_*_0.4)] lg:max-h-[calc(100vh_-_16rem)]"
+            >
+              <div className={`flex items-center justify-center w-full h-full ${slide.bgColor} relative aspect-video`}>
+                <Link href="/" className="absolute top-0 left-0 w-full h-full z-0">
+                  <picture>
+                    <source media="(min-width: 48rem)" srcSet={slide.images[0].src}></source>
+                    <source media="(min-width: 40rem)" srcSet={slide.images[1]?.src}></source>
+                    <img
+                      src={slide.images[1]?.src}
+                      width={1920}
+                      height={1080}
+                      alt={slide.title}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </picture>
+                </Link>
               </div>
-            </div>
-          </SplideSlide>
-        ))}
+            </SplideSlide>
+          );
+        })}
       </Splide>
 
       {/* Custom pagination bar */}
-      <div className="flex items-center justify-center bg-primary-foreground border-b border-t border-secondary">
+      <div className="flex items-center justify-center bg-primary-foreground border-b border-t border-primary">
         <div className="flex items-center">
           {/* Previous button */}
           <button
@@ -189,7 +215,7 @@ const Carousel = ({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-secondary"
+              className="text-primary"
             >
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -197,15 +223,15 @@ const Carousel = ({
 
           {/* Slide counter */}
           <div className="font-medium mx-1 text-sm">
-            <span className="text-secondary">{slideInfo.current}</span>
-            <span className="text-secondary mx-1">/</span>
-            <span className="text-secondary">{slideInfo.total}</span>
+            <span className="text-primary">{slideInfo.current}</span>
+            <span className="text-primary mx-1">/</span>
+            <span className="text-primary">{slideInfo.total}</span>
           </div>
 
           {/* Next button */}
           <button
             onClick={goToNext}
-            className="w-8 h-8 flex items-center justify-center transition-all border-r focus:outline-none"
+            className="w-8 h-8 flex items-center justify-center transition-all border-r border-primary focus:outline-none"
             aria-label="Next slide"
           >
             <svg
@@ -218,7 +244,7 @@ const Carousel = ({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-secondary"
+              className="text-primary"
             >
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
@@ -241,7 +267,7 @@ const Carousel = ({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-secondary"
+                className="text-primary"
               >
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
@@ -256,7 +282,7 @@ const Carousel = ({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-secondary"
+                className="text-primary"
               >
                 <rect x="6" y="4" width="4" height="16"></rect>
                 <rect x="14" y="4" width="4" height="16"></rect>
@@ -267,52 +293,11 @@ const Carousel = ({
       </div>
 
       <style jsx global>{`
-        .carousel-wrapper {
-          position: relative;
-          width: 100%;
-          margin: 0 auto;
-          overflow: hidden; /* Keep content within boundaries */
-        }
-
-        /* Ensure the carousel and track are visible */
-        .splide {
-          visibility: visible !important;
-          opacity: 1 !important;
-        }
-
-        /* Make sure slides are visible */
-        .splide__slide {
-          display: flex !important;
-          align-items: center;
-          justify-content: center;
-          height: ${height};
-          opacity: 1 !important;
-          visibility: visible !important;
-          transition: transform 400ms ease;
-        }
-
         /* Add effect to active slide */
         .is-active-slide {
           transform: scale(1);
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
           z-index: 2;
-        }
-
-        /* Ensure the track and list are properly sized */
-        .splide__track,
-        .splide__list {
-          width: 100%;
-          visibility: visible !important;
-        }
-
-        /* Custom pagination styles */
-        .carousel-wrapper button {
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .carousel-wrapper button:active {
-          transform: translateY(-2px);
         }
       `}</style>
     </div>
