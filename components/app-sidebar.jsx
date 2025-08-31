@@ -65,6 +65,28 @@ const data = {
         },
       ],
     },
+    {
+      title: "Manage Users",
+      url: "#",
+      items: [
+        {
+          title: "View Users",
+          url: "/dashboard/users",
+        },
+        {
+          title: "Roles",
+          url: "/dashboard/users/roles",
+        },
+        {
+          title: "Permissions",
+          url: "/dashboard/users/permissions",
+        },
+        {
+          title: "Resources",
+          url: "/dashboard/users/resources",
+        },
+      ],
+    },
   ],
 };
 
