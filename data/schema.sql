@@ -46,17 +46,672 @@ END;
 $ $ LANGUAGE plpgsql;
 
 -- ========================
--- Users Table
+-- Auth Related Tables
 -- ========================
+-- Users Table for Better Auth
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT UNIQUE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    password TEXT,
+    image TEXT,
     phone TEXT UNIQUE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    provider_role TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
+
+-- Sessions Table for Better Auth
+CREATE TABLE sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    fresh BOOLEAN DEFAULT FALSE,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Accounts Table for Better Auth
+CREATE TABLE accounts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    id_token TEXT,
+    scope TEXT,
+    access_token_expires_at TIMESTAMP WITH TIME ZONE,
+    refresh_token_expires_at TIMESTAMP WITH TIME ZONE,
+    password TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, provider_id)
+);
+
+-- Verifications Table for Better Auth
+CREATE TABLE verifications (
+    id TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ========================
+-- Role-Based Access Control (RBAC) System
+-- ========================
+-- Resources Table - Defines what resources exist in the system
+CREATE TABLE resources (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    -- e.g., 'products', 'orders', 'users', 'categories'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
+);
+
+-- Permissions Table - Defines what actions can be performed
+CREATE TABLE permissions (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    -- e.g., 'read', 'create', 'update', 'delete', 'manage'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
+);
+
+-- Resource Permissions Table - Links permissions to specific resources
+CREATE TABLE resource_permissions (
+    id SERIAL PRIMARY KEY,
+    resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id),
+    UNIQUE(resource_id, permission_id) -- Prevent duplicate resource-permission combinations
+);
+
+-- Roles Table - Defines user roles
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    -- e.g., 'customer', 'admin', 'manager', 'seller'
+    priority INTEGER NOT NULL DEFAULT 100,
+    -- Lower numbers = higher priority (1 = highest, 100 = lowest)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
+);
+
+-- Role Permissions Table - Links roles to resource permissions
+CREATE TABLE role_permissions (
+    id SERIAL PRIMARY KEY,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    resource_permission_id INTEGER NOT NULL REFERENCES resource_permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id),
+    UNIQUE(role_id, resource_permission_id) -- Prevent duplicate role-permission combinations
+);
+
+-- User Roles Table - Assigns roles to users (many-to-many relationship)
+CREATE TABLE user_roles (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    assigned_by TEXT REFERENCES users(id),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    -- Optional expiration date for temporary roles
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id),
+    UNIQUE(user_id, role_id) -- Prevent duplicate user-role assignments
+);
+
+-- ========================
+-- RBAC Indexes for Performance
+-- ========================
+CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+
+CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+
+CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
+
+CREATE INDEX idx_resource_permissions_resource ON resource_permissions(resource_id);
+
+CREATE INDEX idx_roles_priority ON roles(priority);
+
+CREATE INDEX idx_user_roles_expires_at ON user_roles(expires_at);
+
+-- ========================
+-- RBAC Triggers for updated_at
+-- ========================
+CREATE TRIGGER trigger_resources_updated_at BEFORE
+UPDATE
+    ON resources FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_permissions_updated_at BEFORE
+UPDATE
+    ON permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_resource_permissions_updated_at BEFORE
+UPDATE
+    ON resource_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_roles_updated_at BEFORE
+UPDATE
+    ON roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_role_permissions_updated_at BEFORE
+UPDATE
+    ON role_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_user_roles_updated_at BEFORE
+UPDATE
+    ON user_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ========================
+-- RBAC Priority Enforcement Trigger
+-- ========================
+CREATE
+OR REPLACE FUNCTION enforce_role_assignment_hierarchy() RETURNS TRIGGER AS $ $ DECLARE acting_user_priority INTEGER;
+
+role_priority INTEGER;
+
+BEGIN -- Skip validation if no assigned_by user (system assignment)
+IF NEW.assigned_by IS NULL THEN RETURN NEW;
+
+END IF;
+
+-- Get the highest priority for the user doing the assignment
+acting_user_priority := get_user_highest_priority(NEW.assigned_by);
+
+-- Get the priority of the role being assigned
+SELECT
+    priority INTO role_priority
+FROM
+    roles
+WHERE
+    id = NEW.role_id;
+
+-- Check if the acting user can assign this role
+IF acting_user_priority >= COALESCE(role_priority, 999) THEN RAISE EXCEPTION 'Insufficient privileges: Cannot assign role with equal or higher priority than your own roles';
+
+END IF;
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_enforce_role_assignment_hierarchy BEFORE
+INSERT
+    ON user_roles FOR EACH ROW EXECUTE FUNCTION enforce_role_assignment_hierarchy();
+
+-- ========================
+-- Auto-assign Customer Role Trigger
+-- ========================
+CREATE
+OR REPLACE FUNCTION auto_assign_customer_role() RETURNS TRIGGER AS $ $ DECLARE customer_role_id INTEGER;
+
+BEGIN -- Get the customer role ID
+SELECT
+    id INTO customer_role_id
+FROM
+    roles
+WHERE
+    name = 'customer';
+
+-- Only proceed if customer role exists
+IF customer_role_id IS NOT NULL THEN -- Insert the user_role record, but only if it doesn't already exist
+INSERT INTO
+    user_roles (
+        user_id,
+        role_id,
+        assigned_by,
+        created_by,
+        updated_by
+    )
+VALUES
+    (NEW.id, customer_role_id, NULL, NULL, NULL) ON CONFLICT (user_id, role_id) DO NOTHING;
+
+END IF;
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_auto_assign_customer_role
+AFTER
+INSERT
+    ON users FOR EACH ROW EXECUTE FUNCTION auto_assign_customer_role();
+
+-- ========================
+-- RBAC Helper Functions
+-- ========================
+-- Function to check if a user has a specific role
+CREATE
+OR REPLACE FUNCTION user_has_role(p_user_id TEXT, p_role_name TEXT) RETURNS BOOLEAN AS $ $ DECLARE has_role BOOLEAN := FALSE;
+
+BEGIN
+SELECT
+    TRUE INTO has_role
+FROM
+    user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+WHERE
+    ur.user_id = p_user_id
+    AND r.name = p_role_name
+    AND (
+        ur.expires_at IS NULL
+        OR ur.expires_at > NOW()
+    )
+LIMIT
+    1;
+
+RETURN COALESCE(has_role, FALSE);
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Function to check if a user has a specific permission on a resource
+CREATE
+OR REPLACE FUNCTION user_has_permission(
+    p_user_id TEXT,
+    p_resource_name TEXT,
+    p_permission_name TEXT
+) RETURNS BOOLEAN AS $ $ DECLARE has_permission BOOLEAN := FALSE;
+
+BEGIN -- Check role-based permissions
+SELECT
+    TRUE INTO has_permission
+FROM
+    user_roles ur
+    JOIN roles ro ON ur.role_id = ro.id
+    JOIN role_permissions rpr ON ro.id = rpr.role_id
+    JOIN resource_permissions rp ON rpr.resource_permission_id = rp.id
+    JOIN resources r ON rp.resource_id = r.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    ur.user_id = p_user_id
+    AND r.name = p_resource_name
+    AND p.name = p_permission_name
+    AND (
+        ur.expires_at IS NULL
+        OR ur.expires_at > NOW()
+    )
+LIMIT
+    1;
+
+RETURN COALESCE(has_permission, FALSE);
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Enhanced function to get all roles for a user, including permissions, resource, and scope
+CREATE
+OR REPLACE FUNCTION get_user_roles(p_user_id TEXT) RETURNS TABLE (
+    role_id INTEGER,
+    role_name TEXT,
+    role_priority INTEGER,
+    assigned_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    permissions JSONB
+) AS $ $ BEGIN RETURN QUERY
+SELECT
+    r.id as role_id,
+    r.name as role_name,
+    r.priority as role_priority,
+    ur.assigned_at,
+    ur.expires_at,
+    (
+        SELECT
+            jsonb_agg(
+                jsonb_build_object(
+                    'permission_id',
+                    p.id,
+                    'permission_name',
+                    p.name,
+                    'resource_id',
+                    res.id,
+                    'resource_name',
+                    res.name -- Add 'scope', p.scope if you have a scope column in permissions
+                )
+            )
+        FROM
+            role_permissions rp
+            JOIN resource_permissions rpr ON rp.resource_permission_id = rpr.id
+            JOIN permissions p ON rpr.permission_id = p.id
+            JOIN resources res ON rpr.resource_id = res.id
+        WHERE
+            rp.role_id = r.id
+    ) as permissions
+FROM
+    user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+WHERE
+    ur.user_id = p_user_id
+    AND (
+        ur.expires_at IS NULL
+        OR ur.expires_at > NOW()
+    )
+ORDER BY
+    r.priority ASC,
+    r.name;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Function to get all permissions for a user
+CREATE
+OR REPLACE FUNCTION get_user_permissions(p_user_id TEXT) RETURNS TABLE (
+    resource_name TEXT,
+    permission_name TEXT,
+    role_name TEXT
+) AS $ $ BEGIN RETURN QUERY
+SELECT
+    DISTINCT r.name as resource_name,
+    p.name as permission_name,
+    ro.name as role_name
+FROM
+    user_roles ur
+    JOIN roles ro ON ur.role_id = ro.id
+    JOIN role_permissions rpr ON ro.id = rpr.role_id
+    JOIN resource_permissions rp ON rpr.resource_permission_id = rp.id
+    JOIN resources r ON rp.resource_id = r.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    ur.user_id = p_user_id
+    AND (
+        ur.expires_at IS NULL
+        OR ur.expires_at > NOW()
+    )
+ORDER BY
+    r.name,
+    p.name,
+    ro.name;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Function to get the highest priority (lowest number) role for a user
+CREATE
+OR REPLACE FUNCTION get_user_highest_priority(p_user_id TEXT) RETURNS INTEGER AS $ $ DECLARE highest_priority INTEGER := 999;
+
+-- Default to very low priority
+BEGIN
+SELECT
+    MIN(r.priority) INTO highest_priority
+FROM
+    user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+WHERE
+    ur.user_id = p_user_id
+    AND (
+        ur.expires_at IS NULL
+        OR ur.expires_at > NOW()
+    );
+
+RETURN COALESCE(highest_priority, 999);
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Function to check if user can modify another user based on role priority
+CREATE
+OR REPLACE FUNCTION user_can_modify_user(
+    p_acting_user_id TEXT,
+    p_target_user_id TEXT
+) RETURNS BOOLEAN AS $ $ DECLARE acting_user_priority INTEGER;
+
+target_user_priority INTEGER;
+
+BEGIN -- Get the highest priority (lowest number) for both users
+acting_user_priority := get_user_highest_priority(p_acting_user_id);
+
+target_user_priority := get_user_highest_priority(p_target_user_id);
+
+-- User can modify if their priority is higher (lower number) than target
+-- Or if they are modifying themselves
+RETURN (acting_user_priority < target_user_priority)
+OR (p_acting_user_id = p_target_user_id);
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Function to check if user can assign a specific role based on priority
+CREATE
+OR REPLACE FUNCTION user_can_assign_role(
+    p_acting_user_id TEXT,
+    p_role_name TEXT
+) RETURNS BOOLEAN AS $ $ DECLARE acting_user_priority INTEGER;
+
+role_priority INTEGER;
+
+BEGIN -- Get the highest priority for the acting user
+acting_user_priority := get_user_highest_priority(p_acting_user_id);
+
+-- Get the priority of the role being assigned
+SELECT
+    priority INTO role_priority
+FROM
+    roles
+WHERE
+    name = p_role_name;
+
+-- User can assign role if their priority is higher (lower number) than the role
+RETURN acting_user_priority < COALESCE(role_priority, 999);
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- ========================
+-- Initial RBAC Data Setup
+-- ========================
+-- Insert basic permissions
+INSERT INTO
+    permissions (name)
+VALUES
+    ('read'),
+    ('create'),
+    ('update'),
+    ('delete'),
+    ('manage');
+
+-- Insert basic resources for an e-commerce system
+INSERT INTO
+    resources (name)
+VALUES
+    ('products'),
+    ('categories'),
+    ('orders'),
+    ('users'),
+    ('reviews'),
+    ('inventory'),
+    ('reports'),
+    ('settings');
+
+-- Create resource-permission combinations
+INSERT INTO
+    resource_permissions (resource_id, permission_id)
+SELECT
+    r.id,
+    p.id
+FROM
+    resources r
+    CROSS JOIN permissions p;
+
+-- Insert basic roles
+INSERT INTO
+    roles (name, priority)
+VALUES
+    ('super_admin', 1),
+    -- Highest priority
+    ('admin', 10),
+    -- High priority
+    ('manager', 20),
+    -- Medium-high priority
+    ('seller', 30),
+    -- Medium priority
+    ('customer', 100);
+
+-- Lowest priority
+-- Assign permissions to customer role
+INSERT INTO
+    role_permissions (role_id, resource_permission_id)
+SELECT
+    r.id,
+    rp.id
+FROM
+    roles r
+    JOIN resource_permissions rp ON TRUE
+    JOIN resources res ON rp.resource_id = res.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    r.name = 'customer'
+    AND (
+        (
+            res.name = 'products'
+            AND p.name = 'read'
+        )
+        OR (
+            res.name = 'categories'
+            AND p.name = 'read'
+        )
+        OR (
+            res.name = 'orders'
+            AND p.name IN ('read', 'create')
+        )
+        OR (
+            res.name = 'reviews'
+            AND p.name IN ('read', 'create', 'update')
+        )
+    );
+
+-- Assign permissions to seller role (includes customer permissions plus inventory management)
+INSERT INTO
+    role_permissions (role_id, resource_permission_id)
+SELECT
+    r.id,
+    rp.id
+FROM
+    roles r
+    JOIN resource_permissions rp ON TRUE
+    JOIN resources res ON rp.resource_id = res.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    r.name = 'seller'
+    AND (
+        (
+            res.name = 'products'
+            AND p.name IN ('read', 'create', 'update', 'delete')
+        )
+        OR (
+            res.name = 'categories'
+            AND p.name = 'read'
+        )
+        OR (
+            res.name = 'orders'
+            AND p.name = 'read'
+        )
+        OR (
+            res.name = 'inventory'
+            AND p.name IN ('read', 'update')
+        )
+        OR (
+            res.name = 'reviews'
+            AND p.name = 'read'
+        )
+    );
+
+-- Assign permissions to manager role (broader access)
+INSERT INTO
+    role_permissions (role_id, resource_permission_id)
+SELECT
+    r.id,
+    rp.id
+FROM
+    roles r
+    JOIN resource_permissions rp ON TRUE
+    JOIN resources res ON rp.resource_id = res.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    r.name = 'manager'
+    AND (
+        (
+            res.name IN (
+                'products',
+                'categories',
+                'orders',
+                'reviews',
+                'inventory'
+            )
+            AND p.name IN ('read', 'create', 'update')
+        )
+        OR (
+            res.name = 'users'
+            AND p.name = 'read'
+        )
+        OR (
+            res.name = 'reports'
+            AND p.name = 'read'
+        )
+    );
+
+-- Assign permissions to admin role (almost everything except super admin functions)
+INSERT INTO
+    role_permissions (role_id, resource_permission_id)
+SELECT
+    r.id,
+    rp.id
+FROM
+    roles r
+    JOIN resource_permissions rp ON TRUE
+    JOIN resources res ON rp.resource_id = res.id
+    JOIN permissions p ON rp.permission_id = p.id
+WHERE
+    r.name = 'admin'
+    AND NOT (
+        res.name = 'settings'
+        AND p.name IN ('delete', 'manage')
+    );
+
+-- Assign all permissions to super_admin role
+INSERT INTO
+    role_permissions (role_id, resource_permission_id)
+SELECT
+    r.id,
+    rp.id
+FROM
+    roles r
+    JOIN resource_permissions rp ON TRUE
+WHERE
+    r.name = 'super_admin';
 
 -- ========================
 -- shop_sexes
@@ -67,8 +722,8 @@ CREATE TABLE shop_sexes (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_sexes_id_seq RESTART WITH 11;
@@ -82,8 +737,8 @@ CREATE TABLE shop_types (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_types_id_seq RESTART WITH 21;
@@ -97,8 +752,8 @@ CREATE TABLE shop_collections (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_collections_id_seq RESTART WITH 11;
@@ -112,8 +767,8 @@ CREATE TABLE shop_brands (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_brands_id_seq RESTART WITH 101;
@@ -127,8 +782,8 @@ CREATE TABLE shop_fabrics (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_fabrics_id_seq RESTART WITH 1;
@@ -143,8 +798,8 @@ CREATE TABLE shop_colors (
     hex TEXT [] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_colors_id_seq RESTART WITH 1;
@@ -157,8 +812,8 @@ CREATE TABLE shop_sizes (
     label TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 -- First add the slug column to shop_sizes
@@ -239,8 +894,8 @@ CREATE TABLE shop_designs (
     slug TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 -- ========================
@@ -252,8 +907,8 @@ CREATE TABLE shop_product_designs (
     PRIMARY KEY (product_id, design_id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 -- ========================
@@ -828,6 +1483,29 @@ CREATE INDEX idx_shop_colors_slug ON shop_colors(slug);
 CREATE INDEX idx_shop_designs_slug ON shop_designs(slug);
 
 CREATE INDEX idx_shop_sizes_slug ON shop_sizes(slug);
+
+-- ========================
+-- Auth Related Indexes
+-- ========================
+CREATE INDEX idx_users_email ON users(email);
+
+CREATE INDEX idx_users_phone ON users(phone);
+
+CREATE INDEX idx_users_email_verified ON users(email_verified);
+
+CREATE INDEX idx_sessions_token ON sessions(token);
+
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+
+CREATE INDEX idx_accounts_user_id ON accounts(user_id);
+
+CREATE INDEX idx_accounts_provider_account ON accounts(provider_id, account_id);
+
+CREATE INDEX idx_verifications_token ON verifications(token);
+
+CREATE INDEX idx_verifications_user_id ON verifications(user_id);
+
+CREATE INDEX idx_verifications_expires_at ON verifications(expires_at);
 
 -- ========================
 -- INITIAL DATA INSERTS
