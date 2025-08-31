@@ -4,6 +4,7 @@ import Link from "next/link";
 import Logo from "../brand/Logo";
 import { usePathname } from "next/navigation";
 import CartButton from "../cart/CartButton";
+import DashboardOrLoginButton from "./dashboard-or-login-button";
 
 const NavLink = ({ href, className, children }) => {
   const pathname = usePathname();
@@ -15,33 +16,20 @@ const NavLink = ({ href, className, children }) => {
   );
 };
 
-const Navigation = () => {
+const Navigation = ({ session }) => {
   return (
     <div className="px-6 border-b py-2 flex items-center">
       <Logo />
       <div className="ms-auto flex items-center gap-4">
         <ul className="ms-auto flex items-center gap-4 *:underline-offset-3">
           <li>
-            <NavLink href="/" className="">
-              Stitched
-            </NavLink>
-          </li>
-          <li>
-            <NavLink href="/un-stitched">Un-Stitched</NavLink>
-          </li>
-          <li>
-            <NavLink href="/clearance">Clearance Sale</NavLink>
+            <NavLink href="/shop">Shop</NavLink>
           </li>
           <li>
             <NavLink href="/contact">Contact Us</NavLink>
           </li>
         </ul>
-        <Link
-          href="/dashboard"
-          className={`bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:bg-primary/80 transition-colors`}
-        >
-          Dashboard
-        </Link>
+        <DashboardOrLoginButton session={session} />
         <CartButton />
       </div>
     </div>
