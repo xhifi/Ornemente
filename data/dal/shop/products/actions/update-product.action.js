@@ -1,7 +1,5 @@
 "use server";
-import updateProductSchema from "@/data/dal/schema/update-product-schema";
 import updateProduct from "../update-product";
-import validateAction from "@/lib/validate-action";
 
 // usage
 const updateProductAction = async (data) => {
