@@ -10,28 +10,37 @@ import { products as cache_key_products } from "@/cache_keys";
  * @param {number} [options.page=1] - The page number to fetch
  * @param {number} [options.limit=20] - Number of products per page
  * @param {string} [options.search=""] - Search term for product name and description
+ * @param {string} [options.sortBy="latest"] - Sort order: "latest", "oldest", "price_high", "price_low", "name_asc", "name_desc"
  * @param {Object} [options.filters={}] - Filter options
  * @param {number|number[]} [options.filters.sex] - Filter by sex/gender ID
  * @param {number|number[]} [options.filters.type] - Filter by product type ID or array of IDs
  * @param {number|number[]} [options.filters.brand] - Filter by brand ID or array of IDs
  * @param {string|string[]} [options.filters.publish_status] - Filter by publication status ("draft" or "published")
  * @param {string|string[]} [options.filters.published_status] - Alternative to publish_status
+ * @param {boolean} [options.filters.discounted] - Filter only discounted products
+ * @param {number} [options.filters.min_price] - Minimum price filter
+ * @param {number} [options.filters.max_price] - Maximum price filter
  * @returns {Promise<Object>} - Products with pagination details
  */
 const getProductsPaginated = unstable_cache(
-  async ({ page = 1, limit = 20, search = "", filters = {} } = {}) => {
+  async ({ page = 1, limit = 20, search = "", sortBy = "latest", filters = {} } = {}) => {
     try {
       const offset = (page - 1) * limit;
       const params = [];
       let paramIndex = 1;
 
-      // Base query - get products with their related data
+      // Base query - get products with their related data and calculate total stock
       let queryText = `
       SELECT 
         p.*,
         s.name as sex_name,
         t.name as type_name,
-        b.name as brand_name
+        b.name as brand_name,
+        COALESCE((
+          SELECT SUM(ps.stock) 
+          FROM shop_product_sizes ps 
+          WHERE ps.product_id = p.id
+        ), 0) as total_stock
       FROM shop_products p
       LEFT JOIN shop_sexes s ON p.sex = s.id
       LEFT JOIN shop_types t ON p.type = t.id
@@ -88,8 +97,68 @@ const getProductsPaginated = unstable_cache(
         }
       }
 
+      // Handle discounted filter - only show products with discount > 0 AND have stock available
+      if (filters.discounted) {
+        queryText += ` AND p.discount > 0 AND (
+          SELECT SUM(ps.stock) 
+          FROM shop_product_sizes ps 
+          WHERE ps.product_id = p.id
+        ) > 0`;
+      }
+
+      // Handle price range filters
+      if (filters.min_price !== undefined && filters.min_price !== null) {
+        // For minimum price, we calculate the final price after discount
+        queryText += ` AND (p.original_price - (p.original_price * p.discount / 100)) >= $${paramIndex}`;
+        params.push(filters.min_price);
+        paramIndex++;
+      }
+
+      if (filters.max_price !== undefined && filters.max_price !== null) {
+        // For maximum price, we calculate the final price after discount
+        queryText += ` AND (p.original_price - (p.original_price * p.discount / 100)) <= $${paramIndex}`;
+        params.push(filters.max_price);
+        paramIndex++;
+      }
+
+      // Add order clause based on sortBy parameter
+      // Always prioritize in-stock items first, then apply the specific sorting
+      let orderClause = "";
+      const stockPriorityClause = `CASE WHEN (
+        SELECT SUM(ps.stock) 
+        FROM shop_product_sizes ps 
+        WHERE ps.product_id = p.id
+      ) > 0 THEN 0 ELSE 1 END`;
+
+      switch (sortBy) {
+        case "latest":
+          orderClause = `ORDER BY ${stockPriorityClause}, p.created_at DESC`;
+          break;
+        case "oldest":
+          orderClause = `ORDER BY ${stockPriorityClause}, p.created_at ASC`;
+          break;
+        case "price_high":
+          orderClause = `ORDER BY ${stockPriorityClause}, (p.original_price - (p.original_price * p.discount / 100)) DESC NULLS LAST`;
+          break;
+        case "price_low":
+          orderClause = `ORDER BY ${stockPriorityClause}, (p.original_price - (p.original_price * p.discount / 100)) ASC NULLS LAST`;
+          break;
+        case "name_asc":
+          orderClause = `ORDER BY ${stockPriorityClause}, p.name ASC`;
+          break;
+        case "name_desc":
+          orderClause = `ORDER BY ${stockPriorityClause}, p.name DESC`;
+          break;
+        default:
+          // Default to stock availability first, then latest
+          orderClause = `ORDER BY ${stockPriorityClause}, p.created_at DESC`;
+      }
+
       // Add order and pagination
-      queryText += ` ORDER BY p.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      queryText += ` 
+        ${orderClause}
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
       params.push(limit, offset);
 
       // Execute query
@@ -98,10 +167,11 @@ const getProductsPaginated = unstable_cache(
       // Get product IDs for image query
       const productIds = result.rows.map((product) => product.id);
 
-      // Get images for all products in a single query (if there are products)
-      let productsWithImages = [...result.rows];
+      // Get images and sizes for all products in a single query (if there are products)
+      let productsWithImagesAndSizes = [...result.rows];
 
       if (productIds.length > 0) {
+        // Fetch images for all products
         const imagesQuery = `
         SELECT 
           *
@@ -109,7 +179,6 @@ const getProductsPaginated = unstable_cache(
         WHERE product_id = ANY($1)
         ORDER BY product_id, position
       `;
-
         const imagesResult = await query(imagesQuery, [productIds]);
 
         // Group images by product_id
@@ -124,8 +193,34 @@ const getProductsPaginated = unstable_cache(
           imagesByProduct[image.product_id].push({ ...image, resized_thumb, resized_500x500 });
         });
 
-        // Add images and calculate totalDiscountAmount for products
-        productsWithImages = productsWithImages.map((product) => {
+        // Fetch sizes with stock information for all products
+        const sizesQuery = `
+        SELECT 
+          ps.product_id, 
+          ps.id, 
+          ps.size_id, 
+          ps.stock, 
+          ps.sku, 
+          s.code, 
+          s.label
+        FROM shop_product_sizes ps
+        JOIN shop_sizes s ON ps.size_id = s.code
+        WHERE ps.product_id = ANY($1)
+        ORDER BY ps.product_id, s.code
+      `;
+        const sizesResult = await query(sizesQuery, [productIds]);
+
+        // Group sizes by product_id
+        const sizesByProduct = {};
+        sizesResult.rows.forEach((size) => {
+          if (!sizesByProduct[size.product_id]) {
+            sizesByProduct[size.product_id] = [];
+          }
+          sizesByProduct[size.product_id].push(size);
+        });
+
+        // Add images, sizes, and calculate prices for products
+        productsWithImagesAndSizes = productsWithImagesAndSizes.map((product) => {
           // Handle null/undefined values with defaults
           const hasOriginalPrice = product.original_price !== null && product.original_price !== undefined;
           const hasDiscount = product.discount !== null && product.discount !== undefined;
@@ -147,6 +242,13 @@ const getProductsPaginated = unstable_cache(
             finalPrice = parseFloat(finalPrice.toFixed(2));
           }
 
+          // Get product sizes
+          const sizes = sizesByProduct[product.id] || [];
+
+          // total_stock is already calculated in the SQL query
+          // Convert it from string to number to ensure consistency
+          const total_stock = parseInt(product.total_stock || 0, 10);
+
           return {
             ...product,
             images: imagesByProduct[product.id] || [],
@@ -154,6 +256,8 @@ const getProductsPaginated = unstable_cache(
               (imagesByProduct[product.id] || []).find((img) => img.selected) || (imagesByProduct[product.id] || [])[0] || null,
             totalDiscountAmount,
             finalPrice,
+            sizes, // Add sizes to the product
+            total_stock, // Use the database-calculated total stock
           };
         });
       }
@@ -214,18 +318,55 @@ const getProductsPaginated = unstable_cache(
         }
       }
 
+      // Handle discounted filter for count query
+      if (filters.discounted) {
+        countQuery += ` AND p.discount > 0 AND (
+          SELECT SUM(ps.stock) 
+          FROM shop_product_sizes ps 
+          WHERE ps.product_id = p.id
+        ) > 0`;
+      }
+
+      // Handle price range filters for count query
+      if (filters.min_price !== undefined && filters.min_price !== null) {
+        countQuery += ` AND (p.original_price - (p.original_price * p.discount / 100)) >= $${countParamIndex}`;
+        countParams.push(filters.min_price);
+        countParamIndex++;
+      }
+
+      if (filters.max_price !== undefined && filters.max_price !== null) {
+        countQuery += ` AND (p.original_price - (p.original_price * p.discount / 100)) <= $${countParamIndex}`;
+        countParams.push(filters.max_price);
+        countParamIndex++;
+      }
+
       const countResult = await query(countQuery, countParams);
       const total = parseInt(countResult.rows[0].total);
       const totalPages = Math.ceil(total / limit);
 
       return {
         success: true,
-        products: productsWithImages,
+        products: productsWithImagesAndSizes,
         pagination: {
           page,
           limit,
           total,
           totalPages,
+        },
+        meta: {
+          sortedByStock: true, // All sorts now prioritize in-stock items first
+          sortBy: sortBy,
+          totalProductsWithStock: productsWithImagesAndSizes.filter((p) => parseInt(p.total_stock || 0) > 0).length,
+          appliedFilters: {
+            search: search || null,
+            sex: filters.sex || null,
+            type: filters.type || null,
+            brand: filters.brand || null,
+            discounted: filters.discounted || null,
+            minPrice: filters.min_price || null,
+            maxPrice: filters.max_price || null,
+            publish_status: filters.publish_status || filters.published_status || null,
+          },
         },
       };
     } catch (error) {
