@@ -514,3 +514,12 @@ SELECT
     *
 FROM
     shop_orders
+SELECT
+    *
+FROM
+    users;
+
+SELECT
+    *
+FROM
+    shop_sexes;
