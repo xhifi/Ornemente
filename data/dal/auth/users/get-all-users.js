@@ -3,6 +3,8 @@
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 import { users as cache_key_users } from "@/cache_keys";
+import { hasPermission } from "@/lib/authorization";
+import { getServerSession } from "@/lib/auth-actions";
 
 /**
  * Get all users with their roles
@@ -12,15 +14,23 @@ import { users as cache_key_users } from "@/cache_keys";
  * @param {string} [options.search=""] - Search term for name or email
  * @returns {Promise<Object>} - List of users with roles
  */
-const getAllUsers = unstable_cache(
-  async ({ page = 1, limit = 50, search = "" } = {}) => {
-    try {
-      const offset = (page - 1) * limit;
-      const params = [];
-      let paramIndex = 1;
+const getAllUsers = async ({ page = 1, limit = 50, search = "" } = {}) => {
+  if (!(await getServerSession())) {
+    return { success: false, error: "Not authenticated", unauthorized: true };
+  }
+  if (!(await hasPermission("read", "users"))) {
+    return { success: false, error: "Unauthorized", unauthorized: true };
+  }
 
-      // Base query to get users with their role information
-      let queryText = `
+  return unstable_cache(
+    async () => {
+      try {
+        const offset = (page - 1) * limit;
+        const params = [];
+        let paramIndex = 1;
+
+        // Base query to get users with their role information
+        let queryText = `
         SELECT 
           u.id,
           u.name,
@@ -52,69 +62,70 @@ const getAllUsers = unstable_cache(
         WHERE 1=1
       `;
 
-      // Add search condition
-      if (search) {
-        queryText += ` AND (u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
-        params.push(`%${search}%`);
-        paramIndex++;
-      }
+        // Add search condition
+        if (search) {
+          queryText += ` AND (u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
+          params.push(`%${search}%`);
+          paramIndex++;
+        }
 
-      // Group by user and add pagination
-      queryText += `
+        // Group by user and add pagination
+        queryText += `
         GROUP BY u.id, u.name, u.email, u.email_verified, u.phone, u.created_at, u.updated_at
         ORDER BY u.created_at DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
-      params.push(limit, offset);
+        params.push(limit, offset);
 
-      const result = await query(queryText, params);
+        const result = await query(queryText, params);
 
-      // Get total count for pagination
-      let countQuery = `
+        // Get total count for pagination
+        let countQuery = `
         SELECT COUNT(DISTINCT u.id) as total 
         FROM users u
         WHERE 1=1
       `;
 
-      const countParams = [];
-      let countParamIndex = 1;
+        const countParams = [];
+        let countParamIndex = 1;
 
-      if (search) {
-        countQuery += ` AND (u.name ILIKE $${countParamIndex} OR u.email ILIKE $${countParamIndex})`;
-        countParams.push(`%${search}%`);
-        countParamIndex++;
+        if (search) {
+          countQuery += ` AND (u.name ILIKE $${countParamIndex} OR u.email ILIKE $${countParamIndex})`;
+          countParams.push(`%${search}%`);
+          countParamIndex++;
+        }
+
+        const countResult = await query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].total);
+        const totalPages = Math.ceil(total / limit);
+
+        const users = result.rows.map((user) => ({
+          ...user,
+          roles: Array.isArray(user.roles) ? user.roles : [],
+          highestPriority: user.roles && user.roles.length > 0 ? Math.min(...user.roles.map((r) => r.role_priority)) : 999,
+        }));
+
+        return {
+          success: true,
+          users,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+          },
+        };
+      } catch (error) {
+        console.error("Error getting users:", error);
+        return { error: error.message || "Unknown database error" };
       }
-
-      const countResult = await query(countQuery, countParams);
-      const total = parseInt(countResult.rows[0].total);
-      const totalPages = Math.ceil(total / limit);
-
-      const users = result.rows.map((user) => ({
-        ...user,
-        roles: Array.isArray(user.roles) ? user.roles : [],
-        highestPriority: user.roles && user.roles.length > 0 ? Math.min(...user.roles.map((r) => r.role_priority)) : 999,
-      }));
-
-      return {
-        success: true,
-        users,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-        },
-      };
-    } catch (error) {
-      console.error("Error getting users:", error);
-      return { error: error.message || "Unknown database error" };
+    },
+    [cache_key_users],
+    {
+      tags: [cache_key_users],
+      revalidate: 3600,
     }
-  },
-  [cache_key_users],
-  {
-    tags: [cache_key_users],
-    revalidate: 3600,
-  }
-);
+  )();
+};
 
 export default getAllUsers;
