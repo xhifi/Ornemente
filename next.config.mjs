@@ -5,7 +5,9 @@ const nextConfig = {
       bodySizeLimit: "50mb",
     },
   },
-
+  experimental: {
+    authInterrupts: true,
+  },
   images: {
     remotePatterns: [
       {
