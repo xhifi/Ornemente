@@ -4,9 +4,15 @@ import getProductById from "./get-product-by-id";
 import { query } from "@/lib/db";
 import { revalidateTag } from "next/cache";
 import { product as cache_key_product, products as cache_key_products } from "@/cache_keys";
+import { hasPermission } from "@/lib/authorization";
 
 const publishOrUnpublishProduct = async (productId, action = true) => {
   try {
+    console.log(await hasPermission("publish", "products"));
+    if (!(await hasPermission("publish", "products"))) {
+      throw new Error("You do not have permission to publish/unpublish products");
+    }
+
     if (!productId) {
       throw new Error("Product ID is required");
     }
