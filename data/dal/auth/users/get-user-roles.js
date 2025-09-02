@@ -3,13 +3,14 @@
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 import { role as cache_key_role, roles as cache_key_roles, user as cache_key_user, users as cache_key_users } from "@/cache_keys";
+import { getServerSession } from "@/lib/auth-actions";
 
 /**
  * Get all roles assigned to a specific user
  * @param {string} userId - The user ID to get roles for
  * @returns {Promise<{success: boolean, data?: Array, error?: string}>}
  */
-const getUserRoles = (userId) => {
+const getUserRoles = async (userId) => {
   return unstable_cache(
     async () => {
       try {
