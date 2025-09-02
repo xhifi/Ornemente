@@ -28,7 +28,6 @@ export default async function OrderConfirmationPage({ params }) {
       <Card>
         <CardHeader>
           <CardTitle>Order #{order.order_number}</CardTitle>
-          {/* <CardDescription>Placed on {order.created_at}</CardDescription> */}
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
