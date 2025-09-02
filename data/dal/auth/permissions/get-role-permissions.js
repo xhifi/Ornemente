@@ -3,6 +3,8 @@
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 import { permissions as cache_key_permissions, role as cache_key_role } from "@/cache_keys";
+import { hasAllPermissions } from "@/lib/authorization";
+import { getServerSession } from "@/lib/auth-actions";
 
 /**
  * Get all permissions assigned to a specific role
@@ -11,7 +13,19 @@ import { permissions as cache_key_permissions, role as cache_key_role } from "@/
  * @param {boolean} [params.includeResourceDetails=true] - Whether to include resource details
  * @returns {Promise<Object>} - Role permissions with details
  */
-function getRolePermissions({ roleId, includeResourceDetails = true }) {
+async function getRolePermissions({ roleId, includeResourceDetails = true }) {
+  if (!(await getServerSession())) {
+    return { success: false, error: "Not authenticated", unauthorized: true };
+  }
+  if (
+    !(await hasAllPermissions([
+      { scopes: ["read"], resource: "roles" },
+      { scopes: ["read"], resource: "permissions" },
+    ]))
+  ) {
+    return { success: false, error: "Not allowed to read roles and their respective permissions", unauthorized: true };
+  }
+
   return unstable_cache(
     async () => {
       try {
