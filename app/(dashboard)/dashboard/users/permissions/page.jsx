@@ -4,40 +4,24 @@ import getAllResources from "@/data/dal/auth/resources/get-all-resources";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import PermissionActionButtons from "@/components/ui/factory/form/PermissionActionButtons";
 
-import PermissionDialog from "@/components/forms/PermissionDialog";
+import PermissionSheet from "@/components/forms/PermissionSheet";
 
 const ManagePermissionsPage = async () => {
   const [permissionsResult, resourcesResult] = await Promise.all([getAllPermissions(), getAllResources()]);
-
-  if (permissionsResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Permissions</h2>
-          <p className="text-muted-foreground">{permissionsResult.error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (resourcesResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Resources</h2>
-          <p className="text-muted-foreground">{resourcesResult.error}</p>
-        </div>
-      </div>
-    );
-  }
 
   const availablePermissions = permissionsResult.permissions || [];
   const availableResources = resourcesResult.data || [];
 
   return (
     <>
-      <div className="flex">
-        <PermissionDialog availableResources={availableResources} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Permissions Management</h3>
+          <p className="text-sm text-muted-foreground">
+            Create and manage system permissions. Define specific actions that users can perform.
+          </p>
+        </div>
+        <PermissionSheet availableResources={availableResources} />
       </div>
       <Table>
         <TableCaption>Available Permissions in Database</TableCaption>

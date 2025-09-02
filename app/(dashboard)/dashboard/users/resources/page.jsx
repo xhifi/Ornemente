@@ -3,28 +3,23 @@ import getAllResources from "@/data/dal/auth/resources/get-all-resources";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ResourceActionButtons from "@/components/ui/factory/form/ResourceActionButtons";
 
-import ResourceDialog from "@/components/forms/ResourceDialog";
+import ResourceSheet from "@/components/forms/ResourceSheet";
+import { unauthorized } from "next/navigation";
+import { getServerSession } from "@/lib/auth-actions";
 
 const ManageResourcesPage = async () => {
   const resourcesResult = await getAllResources({ includePermissionCount: true });
-
-  if (resourcesResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Resources</h2>
-          <p className="text-muted-foreground">{resourcesResult.error}</p>
-        </div>
-      </div>
-    );
-  }
 
   const availableResources = resourcesResult.data || [];
 
   return (
     <>
-      <div className="flex">
-        <ResourceDialog />
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Resources Management</h3>
+          <p className="text-sm text-muted-foreground">Define system resources that can be associated with permissions and roles.</p>
+        </div>
+        <ResourceSheet />
       </div>
       <Table>
         <TableCaption>Available Resources in Database</TableCaption>

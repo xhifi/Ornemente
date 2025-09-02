@@ -4,40 +4,24 @@ import getAllPermissions from "@/data/dal/auth/permissions/get-all-permissions";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import RoleActionButtons from "@/components/ui/factory/form/RoleActionButtons";
 
-import RoleDialog from "@/components/forms/RoleDialog";
+import RoleSheet from "@/components/forms/RoleSheet";
 
 const ManageRolesPage = async () => {
   const [rolesResult, permissionsResult] = await Promise.all([getAllRoles({ includeUserCount: true }), getAllPermissions()]);
-
-  if (rolesResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Roles</h2>
-          <p className="text-muted-foreground">{rolesResult.error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (permissionsResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Permissions</h2>
-          <p className="text-muted-foreground">{permissionsResult.error}</p>
-        </div>
-      </div>
-    );
-  }
 
   const availableRoles = rolesResult.roles || [];
   const availablePermissions = permissionsResult.permissions || [];
 
   return (
     <>
-      <div className="flex">
-        <RoleDialog availablePermissions={availablePermissions} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Roles Management</h3>
+          <p className="text-sm text-muted-foreground">
+            Create and manage user roles with specific permissions. Lower priority numbers indicate higher access levels.
+          </p>
+        </div>
+        <RoleSheet availablePermissions={availablePermissions} />
       </div>
       <Table>
         <TableCaption>Available Roles in Database</TableCaption>
