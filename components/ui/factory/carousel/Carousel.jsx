@@ -180,9 +180,10 @@ const Carousel = ({
                 <Link href="/" className="absolute top-0 left-0 w-full h-full z-0">
                   <picture>
                     <source media="(min-width: 48rem)" srcSet={slide.images[0].src}></source>
-                    <source media="(min-width: 40rem)" srcSet={slide.images[1]?.src}></source>
-                    <img
-                      src={slide.images[1]?.src}
+                    <source media="(min-width: 40rem)" srcSet={slide.images[1]?.src || slide.images[0].src}></source>
+                    <Image
+                      src={slide.images[1] || null}
+                      loading="lazy"
                       width={1920}
                       height={1080}
                       alt={slide.title}
