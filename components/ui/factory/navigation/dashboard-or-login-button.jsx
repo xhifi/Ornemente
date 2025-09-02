@@ -14,13 +14,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { User, Settings, LogOut, LayoutDashboard, Trash2Icon } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+// import { auth } from "@/better-auth.config";
+// import { headers } from "next/headers";
 
 const DashboardOrLoginButton = ({ session }) => {
   const router = useRouter();
 
   // If user is not logged in, show login button
-  if (!session || !session.user) {
+  if (!session || !session?.user) {
     return (
       <Link href="/register">
         <Button variant="default" size="sm">
@@ -45,11 +48,21 @@ const DashboardOrLoginButton = ({ session }) => {
       const data = await signOutServerSession();
       if (data.success) {
         revalidatePathSSR("/");
+        revalidatePathSSR("/dashboard/users");
+        revalidatePathSSR("/dashboard/roles");
+        revalidatePathSSR("/dashboard/permissions");
+        revalidatePathSSR("/dashboard/resources");
         router.push("/");
       }
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  const handleDelete = async () => {
+    const data = await authClient.deleteUser();
+    revalidatePathSSR("/");
+    console.log(data);
   };
 
   return (
@@ -86,6 +99,10 @@ const DashboardOrLoginButton = ({ session }) => {
         <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Logout</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleDelete}>
+          <Trash2Icon className="mr-2 h-4 w-4" />
+          <span>Delete Account</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
