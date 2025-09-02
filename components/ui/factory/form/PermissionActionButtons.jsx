@@ -1,10 +1,11 @@
 "use client";
 
-import PermissionDialog from "@/components/forms/PermissionDialog";
+import PermissionSheet from "@/components/forms/PermissionSheet";
 import deletePermission from "@/data/dal/auth/permissions/delete-permission";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 const PermissionActionButtons = ({ permission, availableResources = [] }) => {
   const router = useRouter();
@@ -40,10 +41,10 @@ const PermissionActionButtons = ({ permission, availableResources = [] }) => {
 
   return (
     <span className="flex items-center">
-      <PermissionDialog permission={permission} availableResources={availableResources} />
+      <PermissionSheet permission={permission} availableResources={availableResources} />
       <div className="h-full w-2 bg-black inline-block" />
-      <button className="text-destructive hover:underline underline-offset-3" onClick={handleDelete}>
-        Delete
+      <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+        <Trash2 className="h-4 w-4" />
       </button>
     </span>
   );

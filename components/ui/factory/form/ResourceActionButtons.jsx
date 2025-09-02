@@ -1,10 +1,11 @@
 "use client";
 
-import ResourceDialog from "@/components/forms/ResourceDialog";
+import ResourceSheet from "@/components/forms/ResourceSheet";
 import deleteResource from "@/data/dal/auth/resources/delete-resource";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 const ResourceActionButtons = ({ resource }) => {
   const router = useRouter();
@@ -45,10 +46,10 @@ const ResourceActionButtons = ({ resource }) => {
 
   return (
     <span className="flex items-center">
-      <ResourceDialog resource={resource} />
+      <ResourceSheet resource={resource} />
       <div className="h-full w-2 bg-black inline-block" />
-      <button className="text-destructive hover:underline underline-offset-3" onClick={handleDelete}>
-        Delete
+      <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+        <Trash2 className="h-4 w-4" />
       </button>
     </span>
   );

@@ -3,7 +3,8 @@ import deleteRole from "@/data/dal/auth/roles/delete-role";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import RoleDialog from "@/components/forms/RoleDialog";
+import RoleSheet from "@/components/forms/RoleSheet";
+import { Trash2 } from "lucide-react";
 
 const RoleActionButtons = ({ role, availablePermissions = [] }) => {
   const router = useRouter();
@@ -39,15 +40,15 @@ const RoleActionButtons = ({ role, availablePermissions = [] }) => {
 
   return (
     <span className="flex items-center">
-      <RoleDialog role={role} availablePermissions={availablePermissions} />
+      <RoleSheet role={role} availablePermissions={availablePermissions} />
       <div className="h-full w-2 bg-black inline-block" />
       <button
-        className="text-destructive hover:underline underline-offset-3"
+        className={`text-destructive hover:bg-destructive/10 p-1 rounded ${role.name === "super_admin" ? "opacity-50 cursor-not-allowed" : ""}`}
         onClick={handleDelete}
         disabled={role.name === "super_admin"} // Prevent deleting super admin
         title={role.name === "super_admin" ? "Cannot delete super admin role" : ""}
       >
-        Delete
+        <Trash2 className="h-4 w-4" />
       </button>
     </span>
   );

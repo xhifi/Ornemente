@@ -3,79 +3,55 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import deleteSize from "@/data/dal/shop/products/sizes/delete-size";
+import SizeSheet from "@/components/forms/SizeSheet";
 
-export default function SizeActionButtons({ size, onEdit, onSuccess }) {
+export default function SizeActionButtons({ size, canUpdate, canDelete }) {
   const router = useRouter();
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
 
   const handleDelete = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to delete the size "${size.code} (${size.label})"? This action cannot be undone and will affect all related products.`
+      )
+    ) {
+      return;
+    }
+
     try {
-      setIsDeleting(true);
       const response = await deleteSize(size.code);
 
       if (response.ok) {
-        toast.success("Size deleted", {
-          description: `Size "${size.code}" has been deleted successfully.`,
-        });
+        toast.success("Size deleted successfully!");
         router.refresh();
-        setDialogOpen(false);
-        if (onSuccess && typeof onSuccess === 'function') {
-          onSuccess();
-        }
       } else {
-        toast.error("Error deleting size", {
-          description: response.error || "Something went wrong.",
-        });
+        toast.error(response.error || "Failed to delete size");
       }
     } catch (error) {
-      toast.error("Error deleting size", {
-        description: error.message || "Something went wrong.",
-      });
-    } finally {
-      setIsDeleting(false);
+      toast.error(`Error deleting size: ${error.message}`);
     }
   };
 
   return (
-    <div className="flex items-center gap-2 justify-end">
-      <Button variant="ghost" size="icon" onClick={() => onEdit(size)} className="h-8 w-8" title="Edit size">
-        <Edit className="h-4 w-4" />
-      </Button>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20"
-            title="Delete size"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete the size &quot;{size.code} ({size.label})&quot;
-              {size.product_count > 0 ? ". This size has associated products that will need to be updated." : "."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <span className="flex items-center">
+      {canUpdate ? (
+        <SizeSheet size={size} />
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Edit size={16} />
+        </span>
+      )}
+      <div className="h-full w-2 bg-black inline-block" />
+      {canDelete ? (
+        <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+          <Trash2 size={16} />
+        </button>
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Trash2 size={16} />
+        </span>
+      )}
+    </span>
   );
 }

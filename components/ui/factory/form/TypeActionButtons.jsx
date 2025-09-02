@@ -1,11 +1,13 @@
 "use client";
+
+import TypeSheet from "@/components/forms/TypeSheet";
 import deleteProductType from "@/data/dal/shop/types/delete-product-type";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
+import { Trash2Icon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import TypeDialog from "@/components/forms/TypeDialog";
 
-const TypeActionButtons = ({ type }) => {
+const TypeActionButtons = ({ type, canUpdate, canDelete }) => {
   const router = useRouter();
 
   if (!type) {
@@ -13,32 +15,53 @@ const TypeActionButtons = ({ type }) => {
   }
 
   const handleDelete = async () => {
-    const deleted = await deleteProductType(type.id);
-    if (deleted.ok) {
-      revalidatePathSSR("/dashboard/products/types");
-      revalidatePathSSR("/dashboard/products");
-      router.refresh();
-      return toast.success(`Type ${type.name} Deleted Successfully`);
-    } else {
-      return toast.error(`Error deleting product type: ${deleted.error}`);
+    if (
+      !confirm(
+        `Are you sure you want to delete the type "${type.name}"? This action cannot be undone and will affect all related products.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await deleteProductType(type.id);
+
+      if (response.ok) {
+        toast.success("Type deleted successfully!");
+
+        // Revalidate pages
+        revalidatePathSSR("/dashboard/products/types");
+        revalidatePathSSR("/dashboard/products");
+
+        // Force refresh the page to show updated data
+        router.refresh();
+      } else {
+        toast.error(response.error || "Failed to delete type");
+      }
+    } catch (error) {
+      toast.error(`Error deleting type: ${error.message}`);
     }
   };
 
-  //   const handleRevalidate = () => {
-  //     revalidatePathSSR("/dashboard/products/types");
-  //     router.refresh();
-  //   };
-
   return (
     <span className="flex items-center">
-      <TypeDialog type={type} />
+      {canUpdate ? (
+        <TypeSheet type={type} />
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Edit size={16} />
+        </span>
+      )}
       <div className="h-full w-2 bg-black inline-block" />
-      <button className="text-destructive hover:underline underline-offset-3" onClick={handleDelete}>
-        Delete
-      </button>
-      {/* <button className="text-purple-500" onClick={handleRevalidate}>
-        REVALIDATE
-      </button> */}
+      {canDelete ? (
+        <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+          <Trash2Icon size={16} />
+        </button>
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Trash2Icon size={16} />
+        </span>
+      )}
     </span>
   );
 };
