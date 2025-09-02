@@ -1,50 +1,67 @@
 "use client";
-import ColorDialog from "@/components/forms/ColorDialog";
+
+import ColorSheet from "@/components/forms/ColorSheet";
 import deleteProductColor from "@/data/dal/shop/products/actions/colors/delete-product-color";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
+import { Trash2Icon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-const ColorActionButtons = ({ color }) => {
+const ColorActionButtons = ({ color, canUpdate, canDelete }) => {
   const router = useRouter();
 
   if (!color) {
     return <span>No color provided</span>;
   }
 
-  const handleEdit = () => {
-    // Logic for editing the color can be added here
-    toast.info(`Edit functionality for color ${color.name} is not implemented yet.`);
-    // You can redirect to an edit page or open a modal here
-  };
-
   const handleDelete = async () => {
-    const deleted = await deleteProductColor(color.id);
-    if (deleted.ok) {
-      revalidatePathSSR("/dashboard/products/colors");
-      revalidatePathSSR("/dashboard/products");
-      router.refresh();
-      return toast.success(`Color ${color.name} Deleted Successfully`);
-    } else {
-      return toast.error(`Error deleting product color: ${deleted.error}`);
+    if (
+      !confirm(
+        `Are you sure you want to delete the color "${color.name}"? This action cannot be undone and will affect all related products.`
+      )
+    ) {
+      return;
     }
-  };
 
-  const handleRevalidate = () => {
-    revalidatePathSSR("/dashboard/products/colors");
-    router.refresh();
+    try {
+      const response = await deleteProductColor(color.id);
+
+      if (response.ok) {
+        toast.success("Color deleted successfully!");
+
+        // Revalidate pages
+        revalidatePathSSR("/dashboard/products/colors");
+        revalidatePathSSR("/dashboard/products");
+
+        // Force refresh the page to show updated data
+        router.refresh();
+      } else {
+        toast.error(response.error || "Failed to delete color");
+      }
+    } catch (error) {
+      toast.error(`Error deleting color: ${error.message}`);
+    }
   };
 
   return (
     <span className="flex items-center">
-      <ColorDialog color={color} />
+      {canUpdate ? (
+        <ColorSheet color={color} />
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Edit size={16} />
+        </span>
+      )}
       <div className="h-full w-2 bg-black inline-block" />
-      <button className="text-destructive hover:underline underline-offset-3" onClick={handleDelete}>
-        Delete
-      </button>
-      {/* <button className="text-purple-500" onClick={handleRevalidate}>
-        REVALIDATE
-      </button> */}
+      {canDelete ? (
+        <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+          <Trash2Icon size={16} />
+        </button>
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Trash2Icon size={16} />
+        </span>
+      )}
     </span>
   );
 };
