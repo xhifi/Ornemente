@@ -1,81 +1,69 @@
 "use client";
 
-import * as React from "react";
+import BrandSheet from "@/components/forms/BrandSheet";
+import deleteBrand from "@/data/dal/shop/products/brands/delete-brand";
+import revalidatePathSSR from "@/lib/revalidate-path-ssr";
+import { Trash2Icon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import deleteBrand from "@/data/dal/shop/products/brands/delete-brand";
 
-export default function BrandActionButtons({ brand, onEdit, onSuccess }) {
+const BrandActionButtons = ({ brand, canUpdate, canDelete }) => {
   const router = useRouter();
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+
+  if (!brand) {
+    return <span>No brand provided</span>;
+  }
 
   const handleDelete = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to delete the brand "${brand.name}"? This action cannot be undone and will affect all related products.`
+      )
+    ) {
+      return;
+    }
+
     try {
-      setIsDeleting(true);
       const response = await deleteBrand(brand.id);
 
       if (response.ok) {
-        toast.success("Brand deleted", {
-          description: `Brand "${brand.name}" has been deleted successfully.`,
-        });
+        toast.success("Brand deleted successfully!");
+
+        // Revalidate pages
+        revalidatePathSSR("/dashboard/products/brands");
+        revalidatePathSSR("/dashboard/products");
+
+        // Force refresh the page to show updated data
         router.refresh();
-        setDialogOpen(false);
-        if (onSuccess && typeof onSuccess === "function") {
-          onSuccess();
-        }
       } else {
-        toast.error("Error deleting brand", {
-          description: response.error || "Something went wrong.",
-        });
+        toast.error(response.error || "Failed to delete brand");
       }
     } catch (error) {
-      toast.error("Error deleting brand", {
-        description: error.message || "Something went wrong.",
-      });
-    } finally {
-      setIsDeleting(false);
+      toast.error(`Error deleting brand: ${error.message}`);
     }
   };
 
   return (
-    <div className="flex items-center gap-2 justify-end">
-      <Button variant="ghost" size="icon" onClick={() => onEdit(brand)} className="h-8 w-8" title="Edit brand">
-        <Edit className="h-4 w-4" />
-      </Button>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/20"
-            title="Delete brand"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete the brand &quot;{brand.name}&quot;
-              {brand.product_count > 0 ? ". This brand has associated products that will need to be updated." : "."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" disabled={isDeleting} onClick={handleDelete}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <span className="flex items-center">
+      {canUpdate ? (
+        <BrandSheet brand={brand} />
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Edit size={16} />
+        </span>
+      )}
+      <div className="h-full w-2 bg-black inline-block" />
+      {canDelete ? (
+        <button className="text-destructive hover:bg-destructive/10 p-1 rounded" onClick={handleDelete}>
+          <Trash2Icon size={16} />
+        </button>
+      ) : (
+        <span className="text-muted-foreground opacity-50 p-1">
+          <Trash2Icon size={16} />
+        </span>
+      )}
+    </span>
   );
-}
+};
+
+export default BrandActionButtons;
