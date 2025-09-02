@@ -3,11 +3,16 @@
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 import { permission as cache_key_permission, permissions as cache_key_permissions } from "@/cache_keys";
+import { hasPermission } from "@/lib/authorization";
 
 /**
  * Get a permission by ID with its resource assignments
  */
-function getPermissionById(permissionId) {
+async function getPermissionById(permissionId) {
+  if (!(await hasPermission("read", "permissions"))) {
+    return { success: false, error: "Not allowed to read any permissions", unauthorized: true };
+  }
+
   return unstable_cache(
     async () => {
       try {
