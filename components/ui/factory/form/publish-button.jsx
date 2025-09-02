@@ -4,6 +4,7 @@ import { useState } from "react";
 import publishOrUnpublishProduct from "@/data/dal/shop/products/publish-or-unpublish-product";
 import { useRouter } from "next/navigation";
 import revalidatePathSSR from "@/lib/revalidate-path-ssr";
+import { toast } from "sonner";
 
 const PublishButton = ({ status, id }) => {
   const [state, setState] = useState(status === "published" ? false : true);
@@ -14,11 +15,15 @@ const PublishButton = ({ status, id }) => {
       className="px-2 py-1.5 bg-accent text-pretty hover:bg-accent-foreground hover:text-background rounded-md text-sm"
       onClick={async () => {
         const res = await publishOrUnpublishProduct(id, state);
-        if (res.success) {
-          setState("published" === res.data.status ? false : true);
-          router.refresh();
-          revalidatePathSSR("/dashboard/products");
+        console.log(`RESPONSE`, res);
+        if (res.error) {
+          toast.error(res.error);
         }
+
+        setState("published" === res.data.status ? false : true);
+        router.refresh();
+        toast.success(state ? "Product published successfully" : "Product unpublished successfully");
+        revalidatePathSSR("/dashboard/products");
       }}
     >
       {status === "published" ? "Unpublish" : "Publish"}
