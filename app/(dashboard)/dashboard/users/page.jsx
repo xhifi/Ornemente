@@ -4,33 +4,13 @@ import getAllRoles from "@/data/dal/auth/roles/get-all-roles";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import UserRoleManager from "@/components/ui/factory/form/UserRoleManager";
 
+export const dynamic = "force-dynamic";
+
 const ManageUsersPage = async () => {
   const [usersResult, rolesResult] = await Promise.all([
     getAllUsers({ limit: 100 }), // Get more users for management
     getAllRoles(),
   ]);
-
-  if (usersResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Users</h2>
-          <p className="text-muted-foreground">{usersResult.error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (rolesResult.error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-destructive">Error Loading Roles</h2>
-          <p className="text-muted-foreground">{rolesResult.error}</p>
-        </div>
-      </div>
-    );
-  }
 
   const users = usersResult.users || [];
   const availableRoles = rolesResult.roles || [];
@@ -60,7 +40,7 @@ const ManageUsersPage = async () => {
             const userRoles = user.roles || [];
             const highestPriorityRole =
               userRoles.length > 0
-                ? userRoles.reduce((highest, role) => (role.role_priority < highest.role_priority ? role : highest))
+                ? userRoles.reduce((highest, role) => (role.role_priority > highest.role_priority ? role : highest))
                 : null;
 
             return (
