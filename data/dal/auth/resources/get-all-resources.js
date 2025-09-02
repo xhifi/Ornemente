@@ -1,5 +1,6 @@
 "use server";
 
+import { hasPermission } from "@/lib/authorization";
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 
@@ -9,10 +10,14 @@ import { unstable_cache } from "next/cache";
  * @param {boolean} [options.includePermissionCount=false] - Whether to include permission count
  * @returns {Promise<{success: boolean, data?: Array, error?: string}>}
  */
-const getAllResources = unstable_cache(
-  async ({ includePermissionCount = false } = {}) => {
-    try {
-      let queryText = `
+const getAllResources = async ({ includePermissionCount = false } = {}) => {
+  if (!(await hasPermission("read", "resources"))) {
+    return { success: false, error: "Not authorized to read any resources" };
+  }
+  return unstable_cache(
+    async () => {
+      try {
+        let queryText = `
         SELECT 
           r.id,
           r.name,
@@ -20,51 +25,52 @@ const getAllResources = unstable_cache(
           r.updated_at
       `;
 
-      if (includePermissionCount) {
-        queryText += `,
+        if (includePermissionCount) {
+          queryText += `,
           COUNT(DISTINCT rp.permission_id) as permission_count
         `;
-      }
+        }
 
-      queryText += `
+        queryText += `
         FROM resources r
       `;
 
-      if (includePermissionCount) {
-        queryText += `
+        if (includePermissionCount) {
+          queryText += `
           LEFT JOIN resource_permissions rp ON r.id = rp.resource_id
         `;
-      }
+        }
 
-      queryText += `
+        queryText += `
         ${includePermissionCount ? "GROUP BY r.id, r.name, r.created_at, r.updated_at" : ""}
         ORDER BY r.name ASC
       `;
 
-      const result = await query(queryText);
+        const result = await query(queryText);
 
-      const resources = result.rows.map((resource) => ({
-        ...resource,
-        permission_count: includePermissionCount ? parseInt(resource.permission_count || 0, 10) : undefined,
-      }));
+        const resources = result.rows.map((resource) => ({
+          ...resource,
+          permission_count: includePermissionCount ? parseInt(resource.permission_count || 0, 10) : undefined,
+        }));
 
-      return {
-        success: true,
-        data: resources,
-      };
-    } catch (error) {
-      console.error("Error fetching all resources:", error);
-      return {
-        success: false,
-        error: error.message,
-      };
+        return {
+          success: true,
+          data: resources,
+        };
+      } catch (error) {
+        console.error("Error fetching all resources:", error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+    ["all-resources"],
+    {
+      tags: ["resources"],
+      revalidate: 3600, // Cache for 1 hour
     }
-  },
-  ["all-resources"],
-  {
-    tags: ["resources"],
-    revalidate: 3600, // Cache for 1 hour
-  }
-);
+  )();
+};
 
 export default getAllResources;
