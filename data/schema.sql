@@ -841,8 +841,8 @@ CREATE TABLE shop_products (
     note TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_products_id_seq RESTART WITH 1000000;
@@ -859,8 +859,8 @@ CREATE TABLE shop_pieces (
     color INTEGER REFERENCES shop_colors(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER SEQUENCE shop_pieces_id_seq RESTART WITH 41;
@@ -876,8 +876,8 @@ CREATE TABLE shop_product_sizes (
     sku VARCHAR UNIQUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 ALTER TABLE
@@ -940,8 +940,8 @@ CREATE TABLE shop_images (
     -- Store size variations of the image (thumbnails, etc.)
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 -- Create a unique index for product images to prevent duplicates
@@ -1087,7 +1087,7 @@ INSERT
 CREATE
 OR REPLACE FUNCTION set_shop_fabrics_slug() RETURNS TRIGGER AS $ $ BEGIN NEW.slug := slugify(NEW.name);
 
-- RETURN NEW;
+RETURN NEW;
 
 END;
 
@@ -1215,9 +1215,6 @@ END;
 
 $ $ LANGUAGE plpgsql;
 
--- Drop the trigger if it already exists
-DROP TRIGGER IF EXISTS generate_product_size_sku_trigger ON shop_product_sizes;
-
 -- Create the trigger that executes before insert
 CREATE TRIGGER generate_product_size_sku_trigger BEFORE
 INSERT
@@ -1287,7 +1284,7 @@ CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
 CREATE TABLE shop_orders (
     id SERIAL PRIMARY KEY,
     order_number VARCHAR(20) UNIQUE NOT NULL,
-    user_id UUID REFERENCES users(id),
+    user_id TEXT REFERENCES users(id),
     -- Can be NULL for anonymous orders
     customer_name TEXT NOT NULL,
     customer_email TEXT,
@@ -1319,8 +1316,8 @@ CREATE TABLE shop_orders (
     -- Additional data that doesn't fit elsewhere
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    updated_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
 );
 
 -- Table for individual order items
@@ -1350,7 +1347,7 @@ CREATE TABLE shop_order_status_history (
     status order_status NOT NULL,
     comment TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
-    created_by UUID REFERENCES users(id)
+    created_by TEXT REFERENCES users(id)
 );
 
 -- Table for payment transactions
@@ -1501,9 +1498,9 @@ CREATE INDEX idx_accounts_user_id ON accounts(user_id);
 
 CREATE INDEX idx_accounts_provider_account ON accounts(provider_id, account_id);
 
-CREATE INDEX idx_verifications_token ON verifications(token);
+CREATE INDEX idx_verifications_value ON verifications(value);
 
-CREATE INDEX idx_verifications_user_id ON verifications(user_id);
+CREATE INDEX idx_verifications_identifier ON verifications(identifier);
 
 CREATE INDEX idx_verifications_expires_at ON verifications(expires_at);
 
@@ -1678,3 +1675,191 @@ WHERE
 -- SKUs are only generated when a product's status is changed to 'published'.
 -- This ensures that SKUs are generated only after all required product information has been filled in.
 -- When a product's status changes from 'draft' to 'published', all related SKUs are generated automatically.
+-- ========================
+-- Featured Products
+-- ========================
+-- Create shop_products_featured table
+CREATE TABLE shop_products_featured (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES shop_products(id) ON DELETE CASCADE,
+    featured_at TIMESTAMP DEFAULT NOW(),
+    feature_until TIMESTAMP,
+    feature_reason TEXT,
+    feature_type TEXT DEFAULT 'homepage',
+    feature_priority INTEGER DEFAULT 10,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    created_by TEXT REFERENCES users(id),
+    updated_by TEXT REFERENCES users(id)
+);
+
+-- Create indexes
+CREATE INDEX idx_shop_products_featured_product_id ON shop_products_featured(product_id);
+
+CREATE INDEX idx_shop_products_featured_featured_at ON shop_products_featured(featured_at);
+
+CREATE INDEX idx_shop_products_featured_feature_until ON shop_products_featured(feature_until);
+
+CREATE INDEX idx_shop_products_featured_feature_type ON shop_products_featured(feature_type);
+
+CREATE INDEX idx_shop_products_featured_feature_priority ON shop_products_featured(feature_priority);
+
+-- Add trigger for updated_at column
+CREATE TRIGGER trg_shop_products_featured_updated_at BEFORE
+UPDATE
+    ON shop_products_featured FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Add a featured flag to shop_products table for easier querying
+ALTER TABLE
+    shop_products
+ADD
+    COLUMN featured BOOLEAN DEFAULT FALSE;
+
+-- Create a function to update the featured flag in shop_products
+CREATE
+OR REPLACE FUNCTION update_product_featured_flag() RETURNS TRIGGER AS $ $ BEGIN -- On insert or update, set the featured flag to true for the product
+IF (
+    TG_OP = 'INSERT'
+    OR TG_OP = 'UPDATE'
+) THEN
+UPDATE
+    shop_products
+SET
+    featured = TRUE,
+    updated_at = NOW()
+WHERE
+    id = NEW.product_id;
+
+END IF;
+
+-- On delete, check if there are any other features for this product
+-- If not, set featured flag to false
+IF (TG_OP = 'DELETE') THEN
+UPDATE
+    shop_products
+SET
+    featured = EXISTS (
+        SELECT
+            1
+        FROM
+            shop_products_featured
+        WHERE
+            product_id = OLD.product_id
+            AND (
+                feature_until IS NULL
+                OR feature_until > NOW()
+            )
+    ),
+    updated_at = NOW()
+WHERE
+    id = OLD.product_id;
+
+END IF;
+
+RETURN NULL;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Create triggers to maintain the featured flag
+CREATE TRIGGER trg_maintain_product_featured_flag_insert
+AFTER
+INSERT
+    ON shop_products_featured FOR EACH ROW EXECUTE FUNCTION update_product_featured_flag();
+
+CREATE TRIGGER trg_maintain_product_featured_flag_update
+AFTER
+UPDATE
+    ON shop_products_featured FOR EACH ROW EXECUTE FUNCTION update_product_featured_flag();
+
+CREATE TRIGGER trg_maintain_product_featured_flag_delete
+AFTER
+    DELETE ON shop_products_featured FOR EACH ROW EXECUTE FUNCTION update_product_featured_flag();
+
+-- Create a scheduled task to update featured flags when feature_until dates expire
+CREATE
+OR REPLACE FUNCTION cleanup_expired_featured_products() RETURNS void AS $ $ BEGIN -- First, get all products that have expired featured records
+WITH expired_products AS (
+    SELECT
+        DISTINCT product_id
+    FROM
+        shop_products_featured
+    WHERE
+        feature_until < NOW()
+),
+-- Then, for each of those products, check if they have any active featured records
+products_to_update AS (
+    SELECT
+        ep.product_id,
+        EXISTS (
+            SELECT
+                1
+            FROM
+                shop_products_featured
+            WHERE
+                product_id = ep.product_id
+                AND (
+                    feature_until IS NULL
+                    OR feature_until > NOW()
+                )
+        ) AS should_be_featured
+    FROM
+        expired_products ep
+) -- Finally, update the featured flag for products that should change
+UPDATE
+    shop_products sp
+SET
+    featured = ptu.should_be_featured,
+    updated_at = NOW()
+FROM
+    products_to_update ptu
+WHERE
+    sp.id = ptu.product_id
+    AND sp.featured != ptu.should_be_featured;
+
+-- You might want to also delete or archive very old featured entries
+-- Uncomment if needed:
+-- DELETE FROM shop_products_featured
+-- WHERE feature_until < NOW() - INTERVAL '30 days';
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- To run this function periodically, you'll need to set up a cron job or similar
+-- This is a sample SQL comment showing how you might execute this in a cron job:
+-- SELECT cleanup_expired_featured_products();
+-- Add featured_at to shop_products to easily sort by when they were featured
+ALTER TABLE
+    shop_products
+ADD
+    COLUMN featured_at TIMESTAMP;
+
+-- Create a function to update featured_at when a product is featured
+CREATE
+OR REPLACE FUNCTION update_product_featured_at() RETURNS TRIGGER AS $ $ BEGIN -- Update the featured_at timestamp in shop_products when a product is featured
+-- Only update if the current featured_at is NULL or older than the new featured_at
+UPDATE
+    shop_products
+SET
+    featured_at = NEW.featured_at,
+    updated_at = NOW()
+WHERE
+    id = NEW.product_id
+    AND (
+        featured_at IS NULL
+        OR featured_at < NEW.featured_at
+    );
+
+RETURN NEW;
+
+END;
+
+$ $ LANGUAGE plpgsql;
+
+-- Create a trigger to update featured_at
+CREATE TRIGGER trg_update_product_featured_at BEFORE
+INSERT
+    OR
+UPDATE
+    OF featured_at ON shop_products_featured FOR EACH ROW EXECUTE FUNCTION update_product_featured_at();
