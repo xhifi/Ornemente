@@ -39,7 +39,7 @@ export default async function Home() {
               </p>
             </div>
           </Link>
-          {products.products.map((product) => {
+          {products?.products?.map((product) => {
             return <ProductCard product={product} key={product.id} wrapperClass={`col-span-1 md:col-span-2 lg:col-span-1`} />;
           })}
         </div>
@@ -47,16 +47,16 @@ export default async function Home() {
 
       <div className="py-12">
         <InfiniteSlider gap={32} className="" speedOnHover={50} speed={100}>
-          {brands.data.map((brand) => {
+          {brands?.data?.map((brand) => {
             return (
               <Image
-                src={brand.image_url}
-                alt={`Logo of ${brand.name}`}
+                src={brand?.image_url}
+                alt={`Logo of ${brand?.name}`}
                 width={100}
                 height={100}
                 unoptimized={true}
                 className="h-[30px] w-auto"
-                key={brand.id}
+                key={brand?.id}
               />
             );
           })}
