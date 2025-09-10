@@ -43,8 +43,9 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Copy initialization scripts and data
 COPY --from=builder /app/scripts/init-services.js ./scripts/init-services.js
@@ -68,4 +69,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Use the entrypoint script to handle initialization and startup
-CMD ["./scripts/docker-entrypoint.sh"]
+CMD ["sh", "./scripts/docker-entrypoint.sh"]

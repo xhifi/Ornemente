@@ -13,4 +13,4 @@ node scripts/init-services.js || echo "WARNING: Service initialization failed, b
 
 # Start the Next.js application
 echo "Starting Next.js application..."
-exec node server.js
+exec npm start

@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone", // Enable standalone output for Docker deployment
   experimental: {
     serverActions: {
       bodySizeLimit: "50mb",
     },
-  },
-  experimental: {
     authInterrupts: true,
   },
   images: {
