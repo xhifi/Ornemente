@@ -21,12 +21,9 @@ COPY . .
 # Uncomment the following line to disable telemetry
 # ENV NEXT_TELEMETRY_DISABLED=1
 
-# Run initialization script to verify database schemas, create MinIO buckets, etc.
-# Note: This is just verification. Services should be running externally.
-RUN node scripts/init-services.js || echo "Services not available during build, will retry at runtime"
-
-# Build the application
-RUN npm run build
+# Build the application using a dedicated script that doesn't trigger prebuild
+# This prevents the recursive Docker-in-Docker dependency
+RUN npm run build:docker
 
 # Production image, copy all the files and run next
 FROM base AS runner

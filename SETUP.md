@@ -50,6 +50,37 @@ npm run docker:build
 
 This will run the initialization script and then build the Docker image if initialization succeeds.
 
+### Docker Deployment
+
+To run the Docker container with your environment variables:
+
+```bash
+docker run -p 3000:3000 --env-file .env samra-boutique
+```
+
+Or specify individual environment variables:
+
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL=postgres://username:password@host:port/database \
+  -e REDIS_URL=redis://host:port \
+  -e RABBITMQ_URL=amqp://username:password@host:port \
+  -e MINIO_ENDPOINT=host \
+  -e MINIO_PORT=port \
+  -e MINIO_USE_SSL=false \
+  -e MINIO_ACCESS_KEY=access_key \
+  -e MINIO_SECRET_KEY=secret_key \
+  -e MINIO_BUCKET_NAME=bucket_name \
+  -e NEXT_PUBLIC_MINIO_ENDPOINT=host \
+  -e NEXT_PUBLIC_MINIO_BUCKET_NAME=bucket_name \
+  samra-boutique
+```
+
+**Important**: When running in Docker, ensure that the host URLs in your environment variables use host names that are accessible from within the Docker container. For example:
+
+- For localhost services on the same machine, use the Docker host IP (`host.docker.internal`) instead of `localhost`
+- For services in Docker Compose, use the service names as hostnames
+
 ## Manual Setup
 
 If you prefer manual setup, ensure you have the following services running:
