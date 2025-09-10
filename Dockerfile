@@ -21,6 +21,10 @@ COPY . .
 # Uncomment the following line to disable telemetry
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# Run initialization script to verify database schemas, create MinIO buckets, etc.
+# Note: This is just verification. Services should be running externally.
+RUN node scripts/init-services.js || echo "Services not available during build, will retry at runtime"
+
 # Build the application
 RUN npm run build
 
@@ -32,6 +36,10 @@ ENV NODE_ENV=production
 # Uncomment the following line to disable telemetry during runtime
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install production dependencies for initialization scripts
+COPY package.json package-lock.json* ./
+RUN npm install --production=true pg ioredis amqplib @aws-sdk/client-s3 @aws-sdk/s3-request-presigner dotenv
+
 # Create a non-root user to run the app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -40,6 +48,13 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy initialization scripts and data
+COPY --from=builder /app/scripts/init-services.js ./scripts/init-services.js
+COPY --from=builder /app/scripts/wait-for-services.js ./scripts/wait-for-services.js
+COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+COPY --from=builder /app/data/schema.sql ./data/schema.sql
+RUN chmod +x ./scripts/docker-entrypoint.sh
 
 # Set the correct permission for prerender cache
 RUN mkdir -p .next/cache
@@ -55,5 +70,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
-CMD ["node", "server.js"]
+# Use the entrypoint script to handle initialization and startup
+CMD ["./scripts/docker-entrypoint.sh"]

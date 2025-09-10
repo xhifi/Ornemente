@@ -2,17 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { SpinningText } from "../../spinning-text";
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, wrapperClass }) => {
   const disabled = product.total_stock < 1;
   return (
-    <div className="group overflow-hidden border-1 border-primary">
+    <div className={`group overflow-hidden border-1 border-primary ${wrapperClass}`}>
       <div className="w-full relative">
         <Image
           src={product.images[0].path}
           width={500}
           height={700}
           alt={`${product.name}-${product.id}`}
-          className="border-primary border-b w-full aspect-[9/13] object-cover object-center"
+          className="border-primary border-b w-full aspect-[9/13] object-cover object-center p-2"
         />
         {disabled && (
           <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">

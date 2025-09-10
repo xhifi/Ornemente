@@ -170,24 +170,25 @@ const Carousel = ({
         aria-label="Carousel"
         className="opacity-100 visible h-[30rem] md:h-[25rem] lg:h-[calc(100vw_*_0.4)] lg:max-h-[calc(100vh_-_16rem)]"
       >
-        {slides.map((slide) => {
+        {slides.map((slide, i) => {
           return (
             <SplideSlide
               key={slide.id}
               className="d-flex items-center justify-center visible opacity-100 transition-transform duration-500 h-[30rem] ease-in-out md:h-[25rem] lg:h-[calc(100vw_*_0.4)] lg:max-h-[calc(100vh_-_16rem)]"
             >
-              <div className={`flex items-center justify-center w-full h-full ${slide.bgColor} relative aspect-video`}>
-                <Link href="/" className="absolute top-0 left-0 w-full h-full z-0">
+              <div className={`flex items-center justify-center w-full h-full relative`}>
+                <Link href="/" className="absolute top-0 left-0 w-full h-full z-0 p-6 overflow-hidden">
                   <picture>
                     <source media="(min-width: 48rem)" srcSet={slide.images[0].src}></source>
                     <source media="(min-width: 40rem)" srcSet={slide.images[1]?.src || slide.images[0].src}></source>
                     <Image
                       src={slide.images[1] || null}
-                      loading="lazy"
+                      loading={i !== 0 ? "lazy" : "eager"}
                       width={1920}
                       height={1080}
                       alt={slide.title}
                       className="w-full h-full object-cover object-center"
+                      priority={i === 0 ? true : false}
                     />
                   </picture>
                 </Link>

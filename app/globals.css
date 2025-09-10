@@ -151,7 +151,7 @@
     scrollbar-color: var(--foreground) var(--border);
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-primary-foreground text-foreground font-sans antialiased;
   }
 
   a {
