@@ -11,6 +11,32 @@ NC='\033[0m' # No Color
 echo -e "${MAGENTA}=== Samra Boutique Pre-build Setup ===${NC}"
 echo -e "${BLUE}This script will check and prepare your environment before building the application.${NC}"
 
+# Determine environment
+ENV=${NODE_ENV:-development}
+echo -e "${BLUE}Detected environment: ${GREEN}$ENV${NC}"
+
+# Parse DATABASE_URL if it exists
+if [ ! -z "$DATABASE_URL" ]; then
+  echo -e "${BLUE}Parsing DATABASE_URL to extract connection details...${NC}"
+  
+  # Extract components from DATABASE_URL
+  DB_PROTOCOL=$(echo $DATABASE_URL | grep -oP '^(\w+):\/\/')
+  DB_USER=$(echo $DATABASE_URL | grep -oP '\/\/\K([^:]+)')
+  DB_PASS=$(echo $DATABASE_URL | grep -oP ':\/\/[^:]+:\K([^@]+)')
+  DB_HOST=$(echo $DATABASE_URL | grep -oP '@\K([^:]+)')
+  DB_PORT=$(echo $DATABASE_URL | grep -oP '@[^:]+:\K(\d+)')
+  DB_NAME=$(echo $DATABASE_URL | grep -oP '\/\K([^?]+)$')
+  
+  # Set environment variables
+  export POSTGRES_USER=$DB_USER
+  export POSTGRES_PASSWORD=$DB_PASS
+  export POSTGRES_HOST=$DB_HOST
+  export POSTGRES_PORT=$DB_PORT
+  export POSTGRES_DB=$DB_NAME
+  
+  echo -e "${GREEN}✓ Database connection details extracted from DATABASE_URL${NC}"
+fi
+
 # Check if .env file exists
 if [ ! -f .env ]; then
   echo -e "${YELLOW}Warning: .env file not found.${NC}"

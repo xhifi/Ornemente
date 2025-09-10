@@ -41,17 +41,28 @@ RUN npm install --production=true pg ioredis amqplib @aws-sdk/client-s3 @aws-sdk
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files
+# Copy the entire application - standalone output structure handles most of this,
+# but we need to copy everything else that Next.js might need
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy configuration files and other necessary files that might not be included in standalone output
+COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/middleware.js ./
+COPY --from=builder /app/jsconfig.json ./
+COPY --from=builder /app/components.json ./
+COPY --from=builder /app/better-auth.config.js ./
+COPY --from=builder /app/postcss.config.mjs ./
+COPY --from=builder /app/eslint.config.mjs ./
 
 # Copy initialization scripts and data
-COPY --from=builder /app/scripts/init-services.js ./scripts/init-services.js
-COPY --from=builder /app/scripts/wait-for-services.js ./scripts/wait-for-services.js
-COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-COPY --from=builder /app/data/schema.sql ./data/schema.sql
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/data ./data
+
+# Ensure lib directory is included (may already be in standalone output, but just to be safe)
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/app ./app
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
 # Set the correct permission for prerender cache
