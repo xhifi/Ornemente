@@ -45,6 +45,9 @@ COPY --from=builder /app/better-auth.config.js ./
 COPY --from=builder /app/postcss.config.mjs ./
 COPY --from=builder /app/eslint.config.mjs ./
 
+# Copy data directory for instrumentation (schema.sql, seed.sql, etc.)
+COPY --from=builder /app/data ./data
+
 # Ensure lib directory is included (may already be in standalone output, but just to be safe)
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/app ./app
