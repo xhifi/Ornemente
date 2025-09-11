@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS resources (
 -- Permissions Table - Defines what actions can be performed
 CREATE TABLE IF NOT EXISTS permissions (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     -- e.g., 'read', 'create', 'update', 'delete', 'manage'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -297,24 +297,55 @@ INSERT
     ON user_roles FOR EACH ROW EXECUTE FUNCTION enforce_role_assignment_hierarchy();
 
 -- ========================
--- Auto-assign Customer Role Trigger
+-- Auto-assign Roles Trigger (Super Admin for first user, Customer for others)
 -- ========================
 CREATE
-OR REPLACE FUNCTION auto_assign_customer_role() RETURNS TRIGGER AS $$
+OR REPLACE FUNCTION auto_assign_user_role() RETURNS TRIGGER AS $$
 DECLARE
-    customer_role_id INTEGER;
+    user_count INTEGER;
+
+super_admin_role_id INTEGER;
+
+customer_role_id INTEGER;
+
+role_to_assign INTEGER;
 
 BEGIN
-    -- Get the customer role ID
+    -- Count existing users (excluding the newly inserted one)
     SELECT
-        id INTO customer_role_id
+        COUNT(*) - 1 INTO user_count
     FROM
-        roles
-    WHERE
-        name = 'customer';
+        users;
 
--- Only proceed if customer role exists
-IF customer_role_id IS NOT NULL THEN -- Insert the user_role record, but only if it doesn't already exist
+-- Get role IDs
+SELECT
+    id INTO super_admin_role_id
+FROM
+    roles
+WHERE
+    name = 'super_admin';
+
+SELECT
+    id INTO customer_role_id
+FROM
+    roles
+WHERE
+    name = 'customer';
+
+-- Determine which role to assign
+IF user_count = 0
+AND super_admin_role_id IS NOT NULL THEN -- This is the first user, assign super_admin role
+role_to_assign := super_admin_role_id;
+
+ELSIF customer_role_id IS NOT NULL THEN -- This is a subsequent user, assign customer role
+role_to_assign := customer_role_id;
+
+ELSE -- No appropriate role found, exit
+RETURN NEW;
+
+END IF;
+
+-- Insert the user_role record
 INSERT INTO
     user_roles (
         user_id,
@@ -324,9 +355,7 @@ INSERT INTO
         updated_by
     )
 VALUES
-    (NEW .id, customer_role_id, NULL, NULL, NULL) ON CONFLICT (user_id, role_id) DO NOTHING;
-
-END IF;
+    (NEW .id, role_to_assign, NULL, NULL, NULL) ON CONFLICT (user_id, role_id) DO NOTHING;
 
 RETURN NEW;
 
@@ -335,9 +364,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE
-OR REPLACE TRIGGER trigger_auto_assign_customer_role AFTER
+OR REPLACE TRIGGER trigger_auto_assign_user_role AFTER
 INSERT
-    ON users FOR EACH ROW EXECUTE FUNCTION auto_assign_customer_role();
+    ON users FOR EACH ROW EXECUTE FUNCTION auto_assign_user_role();
 
 -- ========================
 -- RBAC Helper Functions
@@ -597,10 +626,6 @@ CREATE TABLE IF NOT EXISTS shop_variants (
     updated_by TEXT REFERENCES users(id)
 );
 
--- Set initial sequence value for shop_variants
-SELECT
-    pg_catalog.setval('shop_variants_id_seq', 10, true);
-
 -- ========================
 -- shop_types
 -- ========================
@@ -613,10 +638,6 @@ CREATE TABLE IF NOT EXISTS shop_types (
     created_by TEXT REFERENCES users(id),
     updated_by TEXT REFERENCES users(id)
 );
-
--- Set initial sequence value for shop_types
-SELECT
-    pg_catalog.setval('shop_types_id_seq', 20, true);
 
 -- ========================
 -- shop_collections
@@ -631,10 +652,6 @@ CREATE TABLE IF NOT EXISTS shop_collections (
     updated_by TEXT REFERENCES users(id)
 );
 
--- Set initial sequence value for shop_collections
-SELECT
-    pg_catalog.setval('shop_collections_id_seq', 10, true);
-
 -- ========================
 -- shop_brands
 -- ========================
@@ -647,10 +664,6 @@ CREATE TABLE IF NOT EXISTS shop_brands (
     created_by TEXT REFERENCES users(id),
     updated_by TEXT REFERENCES users(id)
 );
-
--- Set initial sequence value for shop_brands
-SELECT
-    pg_catalog.setval('shop_brands_id_seq', 100, true);
 
 -- ========================
 -- shop_fabrics
@@ -665,10 +678,6 @@ CREATE TABLE IF NOT EXISTS shop_fabrics (
     updated_by TEXT REFERENCES users(id)
 );
 
--- Set initial sequence value for shop_fabrics
-SELECT
-    pg_catalog.setval('shop_fabrics_id_seq', 1, false);
-
 -- ========================
 -- shop_colors
 -- ========================
@@ -682,10 +691,6 @@ CREATE TABLE IF NOT EXISTS shop_colors (
     created_by TEXT REFERENCES users(id),
     updated_by TEXT REFERENCES users(id)
 );
-
--- Set initial sequence value for shop_colors
-SELECT
-    pg_catalog.setval('shop_colors_id_seq', 1, false);
 
 -- ========================
 -- shop_sizes
@@ -723,10 +728,6 @@ CREATE TABLE IF NOT EXISTS shop_products (
     updated_by TEXT REFERENCES users(id)
 );
 
--- Set initial sequence value for shop_products
-SELECT
-    pg_catalog.setval('shop_products_id_seq', 999999, true);
-
 -- ========================
 -- shop_pieces
 -- ========================
@@ -744,10 +745,6 @@ CREATE TABLE IF NOT EXISTS shop_pieces (
         created_by TEXT REFERENCES users(id),
         updated_by TEXT REFERENCES users(id)
 );
-
--- Set initial sequence value for shop_pieces
-SELECT
-    pg_catalog.setval('shop_pieces_id_seq', 40, true);
 
 -- ========================
 -- shop_product_sizes
