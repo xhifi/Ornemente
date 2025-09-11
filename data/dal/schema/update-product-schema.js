@@ -5,7 +5,7 @@ const updateProductSchema = z.object({
   name: z.string().min(1, "Product name is required").max(255, "Product name must be less than 255 characters"),
   description: z.string().optional(),
   tagline: z.string().optional(),
-  sex: z.coerce.number().int().min(1, "Gender selection is required"),
+  variant: z.coerce.number().int().min(1, "Variant selection is required"),
   type: z.coerce.number().int().min(1, "Product type is required"),
   brand: z.coerce.number().int().min(1, "Brand is required"),
   original_price: z.coerce.number().positive("Price must be greater than zero"),

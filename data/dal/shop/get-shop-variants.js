@@ -2,16 +2,16 @@
 import { query } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 
-const getShopSexes = unstable_cache(
+const getShopVariants = unstable_cache(
   async (slug) => {
     try {
       if (slug) {
-        const res = await query(`SELECT * FROM shop_sexes WHERE slug = $1;`, [slug]);
+        const res = await query(`SELECT * FROM shop_variants WHERE slug = $1;`, [slug]);
         if (!res.rowCount) {
           return {
             ok: false,
             data: null,
-            error: `${slug} not found in available sexes in the shop`,
+            error: `${slug} not found in available variants in the shop`,
           };
         }
         return {
@@ -21,7 +21,7 @@ const getShopSexes = unstable_cache(
         };
       }
 
-      const res = await query(`SELECT * FROM shop_sexes;`);
+      const res = await query(`SELECT * FROM shop_variants;`);
       if (res.rowCount === 0) {
         return {
           ok: true,
@@ -42,11 +42,11 @@ const getShopSexes = unstable_cache(
       };
     }
   },
-  ["shop-sexes"],
+  ["shop-variants"],
   {
-    tags: ["shop-sexes"],
+    tags: ["shop-variants"],
     revalidate: 60, // Cache for 60 seconds
   }
 );
 
-export default getShopSexes;
+export default getShopVariants;

@@ -12,7 +12,7 @@ import { products as cache_key_products } from "@/cache_keys";
  * @param {string} [options.search=""] - Search term for product name and description
  * @param {string} [options.sortBy="latest"] - Sort order: "latest", "oldest", "price_high", "price_low", "name_asc", "name_desc"
  * @param {Object} [options.filters={}] - Filter options
- * @param {number|number[]} [options.filters.sex] - Filter by sex/gender ID
+ * @param {number|number[]} [options.filters.variant] - Filter by variant/gender ID
  * @param {number|number[]} [options.filters.type] - Filter by product type ID or array of IDs
  * @param {number|number[]} [options.filters.brand] - Filter by brand ID or array of IDs
  * @param {string|string[]} [options.filters.publish_status] - Filter by publication status ("draft" or "published")
@@ -33,7 +33,7 @@ const getProductsPaginated = unstable_cache(
       let queryText = `
       SELECT 
         p.*,
-        s.name as sex_name,
+        s.name as variant_name,
         t.name as type_name,
         b.name as brand_name,
         COALESCE((
@@ -42,7 +42,7 @@ const getProductsPaginated = unstable_cache(
           WHERE ps.product_id = p.id
         ), 0) as total_stock
       FROM shop_products p
-      LEFT JOIN shop_sexes s ON p.sex = s.id
+      LEFT JOIN shop_variants s ON p.variant = s.id
       LEFT JOIN shop_types t ON p.type = t.id
       LEFT JOIN shop_brands b ON p.brand = b.id
       WHERE 1=1
@@ -56,9 +56,9 @@ const getProductsPaginated = unstable_cache(
       }
 
       // Add filters
-      if (filters.sex) {
-        queryText += ` AND p.sex = $${paramIndex}`;
-        params.push(filters.sex);
+      if (filters.variant) {
+        queryText += ` AND p.variant = $${paramIndex}`;
+        params.push(filters.variant);
         paramIndex++;
       }
 
@@ -278,9 +278,9 @@ const getProductsPaginated = unstable_cache(
         countParamIndex++;
       }
 
-      if (filters.sex) {
-        countQuery += ` AND p.sex = $${countParamIndex}`;
-        countParams.push(filters.sex);
+      if (filters.variant) {
+        countQuery += ` AND p.variant = $${countParamIndex}`;
+        countParams.push(filters.variant);
         countParamIndex++;
       }
 
@@ -359,7 +359,7 @@ const getProductsPaginated = unstable_cache(
           totalProductsWithStock: productsWithImagesAndSizes.filter((p) => parseInt(p.total_stock || 0) > 0).length,
           appliedFilters: {
             search: search || null,
-            sex: filters.sex || null,
+            variant: filters.variant || null,
             type: filters.type || null,
             brand: filters.brand || null,
             discounted: filters.discounted || null,

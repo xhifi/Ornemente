@@ -50,4 +50,4 @@ rabbitmq_data
 minio_data
 
 # VSCode settings
-.vscode/settings.json
+.vscode/

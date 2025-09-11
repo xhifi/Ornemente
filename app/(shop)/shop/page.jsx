@@ -2,7 +2,7 @@ import ProductCard from "@/components/ui/factory/product-cards/ProductCard";
 import getProductsPaginated from "@/data/dal/shop/products/get-all-products-paginated";
 import getShopTypes from "@/data/dal/shop/get-shop-types";
 import getShopBrands from "@/data/dal/shop/get-shop-brands";
-import getShopSexes from "@/data/dal/shop/get-shop-sexes";
+import getShopVariants from "@/data/dal/shop/get-shop-variants";
 import getShopPriceRange from "@/data/dal/shop/get-shop-price-range";
 import Link from "next/link";
 
@@ -24,7 +24,7 @@ const ShopPage = async ({ params, searchParams }) => {
   const type = search.type?.split(" ").map((item) => parseInt(item)) || null;
   const brand = search?.brand?.split(" ").map((item) => parseInt(item)) || null;
   const discounted = search?.discounted === "" || typeof search?.discounted === "string" ? true : false || null;
-  const sex = param?.sex || null;
+  const variant = param?.variant || null;
   const currentPage = parseInt(search?.page) || 1;
   const sortBy = search?.sort || "latest";
   const minPrice = search?.min_price ? parseFloat(search.min_price) : null;
@@ -38,7 +38,7 @@ const ShopPage = async ({ params, searchParams }) => {
       publish_status: "published",
       type: type,
       brand: brand,
-      sex: sex,
+      variant: variant,
       discounted: discounted,
       min_price: minPrice,
       max_price: maxPrice,
@@ -46,17 +46,17 @@ const ShopPage = async ({ params, searchParams }) => {
   });
 
   // Fetch filter data
-  const [typesResponse, brandsResponse, sexesResponse, priceRangeResponse] = await Promise.all([
+  const [typesResponse, brandsResponse, variantsResponse, priceRangeResponse] = await Promise.all([
     getShopTypes(),
     getShopBrands(),
-    getShopSexes(),
+    getShopVariants(),
     getShopPriceRange(),
   ]);
 
   const filterData = {
     types: typesResponse?.ok ? typesResponse.data : [],
     brands: brandsResponse?.ok ? brandsResponse.data : [],
-    sexes: sexesResponse?.ok ? sexesResponse.data : [],
+    variants: variantsResponse?.ok ? variantsResponse.data : [],
   };
 
   const priceRange = priceRangeResponse?.ok ? priceRangeResponse.data : { min_price: 0, max_price: 10000 };
@@ -77,7 +77,7 @@ const ShopPage = async ({ params, searchParams }) => {
     if (page > 1) params.set("page", page.toString());
 
     const queryString = params.toString();
-    const basePath = sex ? `/shop/${sex}` : "/shop";
+    const basePath = variant ? `/shop/${variant}` : "/shop";
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
 

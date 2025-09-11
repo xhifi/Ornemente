@@ -1,6 +1,6 @@
 import getProductById from "@/data/dal/shop/products/get-product-by-id";
 import { getProductImages } from "@/data/dal/shop/file-system/image-actions";
-import getShopSexes from "@/data/dal/shop/get-shop-sexes";
+import getShopVariants from "@/data/dal/shop/get-shop-variants";
 import getShopTypes from "@/data/dal/shop/get-shop-types";
 import getShopBrands from "@/data/dal/shop/get-shop-brands";
 import getShopSizes from "@/data/dal/shop/get-shop-sizes";
@@ -20,10 +20,10 @@ export default async function EditProductPage({ params }) {
   const { id } = await params;
 
   // Fetch all data in parallel
-  const [productResult, sexesResult, typesResult, brandsResult, sizesResult, designsResult, fabricsResult, colorsResult, imagesResult] =
+  const [productResult, variantsResult, typesResult, brandsResult, sizesResult, designsResult, fabricsResult, colorsResult, imagesResult] =
     await Promise.all([
       getProductById(id),
-      getShopSexes(),
+      getShopVariants(),
       getShopTypes(),
       getShopBrands(),
       getShopSizes(),
@@ -57,7 +57,7 @@ export default async function EditProductPage({ params }) {
         deleteImage={deleteProductImage}
         existingDesigns={existingDesigns}
         existingSizes={existingSizes}
-        sexes={sexesResult}
+        variants={variantsResult}
         types={typesResult}
         brands={brandsResult}
         sizes={sizesResult}

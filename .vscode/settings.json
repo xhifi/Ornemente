@@ -9,6 +9,17 @@
       "username": "postgres",
       "password": "postgres",
       "name": "samraz_boutique"
+    },
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "192.168.1.99",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "samraz_prod",
+      "database": "samraz_boutique",
+      "username": "postgres",
+      "password": "postgres"
     }
   ]
 }

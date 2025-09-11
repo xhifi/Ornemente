@@ -23,7 +23,7 @@ const UpdateProduct = ({
   deleteImage,
   existingDesigns = [],
   existingSizes = [],
-  sexes,
+  variants,
   types,
   brands,
   sizes,
@@ -41,7 +41,7 @@ const UpdateProduct = ({
     name: "",
     description: "",
     tagline: "",
-    sex: undefined,
+    variant: undefined,
     type: undefined,
     brand: undefined,
     original_price: "",
@@ -76,12 +76,12 @@ const UpdateProduct = ({
   useEffect(() => {
     // Check if all required data is loaded
     const dataIsReady =
-      product && sexes?.data?.length > 0 && types?.data?.length > 0 && brands?.data?.length > 0 && sizes?.data?.length > 0;
+      product && variants?.data?.length > 0 && types?.data?.length > 0 && brands?.data?.length > 0 && sizes?.data?.length > 0;
 
     // When data is ready, initialize form and turn off loading
     if (dataIsReady) {
       console.log("Data is ready, product data:", {
-        sex_id: product.sex_id,
+        variant_id: product.variant_id,
         type_id: product.type_id,
         brand_id: product.brand_id,
       });
@@ -92,7 +92,7 @@ const UpdateProduct = ({
         description: product.description || "",
         tagline: product.tagline || "",
         // Set IDs directly - no delayed setValue needed
-        sex: product.sex ? String(product.sex) : undefined,
+        variant: product.variant ? String(product.variant) : undefined,
         type: product.type ? String(product.type) : undefined,
         brand: product.brand ? String(product.brand) : undefined,
         original_price: String(product.original_price) || "0",
@@ -111,7 +111,7 @@ const UpdateProduct = ({
       // Turn off loading immediately
       setIsLoading(false);
     }
-  }, [product, sexes, types, brands, sizes, reset, existingSizes, existingDesigns]);
+  }, [product, variants, types, brands, sizes, reset, existingSizes, existingDesigns]);
 
   // Simplified form submission handler
   const onSubmit = async (data) => {
@@ -129,7 +129,7 @@ const UpdateProduct = ({
       const processedData = {
         ...data,
         id: product.id,
-        sex: safeNumber(data.sex),
+        variant: safeNumber(data.variant),
         type: safeNumber(data.type),
         brand: safeNumber(data.brand),
         original_price: safeNumber(data.original_price),
@@ -274,24 +274,24 @@ const UpdateProduct = ({
 
               {/* Categories & Type */}
               <div className="grid gap-4 md:grid-cols-3">
-                {/* Gender Select using shadcn/ui with proper controller */}
+                {/* Variant Select using shadcn/ui with proper controller */}
                 <div className="space-y-2">
-                  <Label htmlFor="sex">Gender</Label>
+                  <Label htmlFor="variant">Variant</Label>
                   <Controller
-                    name="sex"
+                    name="variant"
                     control={control}
                     render={({ field }) => {
-                      console.log("Gender field value:", field);
+                      console.log("Variant field value:", field);
 
                       return (
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="sex" className={errors.sex ? "border-destructive w-full" : "w-full"}>
-                            <SelectValue placeholder="Select gender" />
+                          <SelectTrigger id="variant" className={errors.variant ? "border-destructive w-full" : "w-full"}>
+                            <SelectValue placeholder="Select variant" />
                           </SelectTrigger>
                           <SelectContent>
-                            {sexes?.data?.map((gender) => (
-                              <SelectItem key={gender.id} value={String(gender.id)}>
-                                {gender.name}
+                            {variants?.data?.map((variantOption) => (
+                              <SelectItem key={variantOption.id} value={String(variantOption.id)}>
+                                {variantOption.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -299,7 +299,7 @@ const UpdateProduct = ({
                       );
                     }}
                   />
-                  {errors.sex && <p className="text-destructive text-xs">{errors.sex.message}</p>}
+                  {errors.variant && <p className="text-destructive text-xs">{errors.variant.message}</p>}
                 </div>
 
                 {/* Type Select using shadcn/ui with proper controller */}

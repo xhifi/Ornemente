@@ -266,10 +266,10 @@ export default function ImageGallery({
                             image.base64
                               ? image.base64
                               : image.url
-                              ? image.url
-                              : image.path && (image.path.startsWith("http") || image.path.startsWith("/"))
-                              ? image.path
-                              : "/placeholder-image.jpg"
+                                ? image.url
+                                : image.path && (image.path.startsWith("http") || image.path.startsWith("/"))
+                                  ? image.path
+                                  : "/placeholder-image.jpg"
                           }
                           alt={`Product image ${index + 1}`}
                           fill

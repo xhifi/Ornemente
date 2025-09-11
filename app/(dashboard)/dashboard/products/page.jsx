@@ -1,5 +1,5 @@
 import Link from "next/link";
-import getShopSexes from "@/data/dal/shop/get-shop-sexes";
+import getShopVariants from "@/data/dal/shop/get-shop-variants";
 import AddProductSheet from "@/components/forms/AddProductSheet";
 import DeleteProductSheet from "@/components/forms/DeleteProductSheet";
 import Image from "next/image";
@@ -24,19 +24,19 @@ export default async function ProductsPage() {
 
   // Fetch data on the server
   const { products } = await getProductsPaginated({}); // Pass empty object for default values
-  const sexes = await getShopSexes();
+  const variants = await getShopVariants();
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        {canCreateProducts && <AddProductSheet sexes={sexes} />}
+        {canCreateProducts && <AddProductSheet variants={variants} />}
       </div>
 
       {products.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-lg shadow">
           <p className="text-gray-500 mb-4">No products found</p>
-          <AddProductSheet sexes={sexes} buttonText="Add Your First Product" />
+          <AddProductSheet variants={variants} buttonText="Add Your First Product" />
         </div>
       ) : (
         <Table>
@@ -44,7 +44,7 @@ export default async function ProductsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
-              <TableHead>Gender</TableHead>
+              <TableHead>Variant</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Status</TableHead>
               {canPublishProducts && <TableHead>Publish</TableHead>}
@@ -79,7 +79,7 @@ export default async function ProductsPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>{product.sex_name || "Unspecified"}</TableCell>
+                <TableCell>{product.variant_name || "Unspecified"}</TableCell>
                 <TableCell>
                   <div>{product.original_price ? `₨${product.original_price.toLocaleString()}` : "N/A"}</div>
                   {product.discount > 0 && <div className="text-xs text-green-600">{product.discount}% off</div>}

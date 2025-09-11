@@ -20,12 +20,12 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
   // Extract filter data from props
   const types = filterData?.types || [];
   const brands = filterData?.brands || [];
-  const sexes = filterData?.sexes || [];
+  const variants = filterData?.variants || [];
 
   // Current filter states
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedSex, setSelectedSex] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState("");
   const [isDiscounted, setIsDiscounted] = useState(false);
 
   // Get dynamic price range bounds from props
@@ -75,9 +75,9 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
     }
   };
 
-  // Handle sex selection (single)
-  const handleSexChange = (sexSlug) => {
-    setSelectedSex(sexSlug);
+  // Handle variant selection (single)
+  const handleVariantChange = (variantSlug) => {
+    setSelectedVariant(variantSlug);
   };
 
   // Apply filters
@@ -111,9 +111,9 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
     const queryString = params.toString();
     let newUrl = pathname;
 
-    // Handle sex parameter in URL path
-    if (selectedSex) {
-      newUrl = `/shop/${selectedSex}`;
+    // Handle variant parameter in URL path
+    if (selectedVariant) {
+      newUrl = `/shop/${selectedVariant}`;
     } else {
       newUrl = "/shop";
     }
@@ -130,7 +130,7 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
   const clearFilters = () => {
     setSelectedTypes([]);
     setSelectedBrands([]);
-    setSelectedSex("");
+    setSelectedVariant("");
     setIsDiscounted(false);
     setPriceRangeState([minPrice, maxPrice]);
     router.push("/shop");
@@ -141,7 +141,7 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
   const activeFiltersCount =
     selectedTypes.length +
     selectedBrands.length +
-    (selectedSex ? 1 : 0) +
+    (selectedVariant ? 1 : 0) +
     (isDiscounted ? 1 : 0) +
     (priceRangeState[0] > minPrice || priceRangeState[1] < maxPrice ? 1 : 0);
 
@@ -235,22 +235,22 @@ const ProductListFilter = ({ data, filterData, priceRange }) => {
             </div>
           )}
 
-          {/* Sex */}
-          {sexes.length > 0 && (
+          {/* Variant */}
+          {variants.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-medium">Category</h3>
-              <RadioGroup value={selectedSex} onValueChange={handleSexChange}>
+              <RadioGroup value={selectedVariant} onValueChange={handleVariantChange}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="" id="sex-all" />
-                  <label htmlFor="sex-all" className="text-sm font-medium cursor-pointer">
+                  <RadioGroupItem value="" id="variant-all" />
+                  <label htmlFor="variant-all" className="text-sm font-medium cursor-pointer">
                     All Categories
                   </label>
                 </div>
-                {sexes.map((sex) => (
-                  <div key={sex.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={sex.slug} id={`sex-${sex.id}`} />
-                    <label htmlFor={`sex-${sex.id}`} className="text-sm font-medium cursor-pointer">
-                      {sex.name}
+                {variants.map((variant) => (
+                  <div key={variant.id} className="flex items-center space-x-2">
+                    <RadioGroupItem value={variant.slug} id={`variant-${variant.id}`} />
+                    <label htmlFor={`variant-${variant.id}`} className="text-sm font-medium cursor-pointer">
+                      {variant.name}
                     </label>
                   </div>
                 ))}

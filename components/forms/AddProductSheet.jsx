@@ -18,10 +18,10 @@ import { Textarea } from "@/components/ui/textarea";
 const zodSchema = z.object({
   name: z.string().min(1, "Product name is required").max(255, "Product name must be less than 255 characters"),
   description: z.string().optional(),
-  sex: z.coerce.number().positive("Gender selection is required"),
+  variant: z.coerce.number().positive("Variant selection is required"),
 });
 
-const AddProductSheet = ({ sexes, buttonText = "Add Product" }) => {
+const AddProductSheet = ({ variants, buttonText = "Add Product" }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,35 +40,35 @@ const AddProductSheet = ({ sexes, buttonText = "Add Product" }) => {
     defaultValues: {
       name: "",
       description: "",
-      sex: "", // Will be set after sexes are loaded
+      variant: "", // Will be set after variants are loaded
     },
   });
 
-  const watchSex = watch("sex");
+  const watchVariant = watch("variant");
 
-  // Set default gender when sexes data is loaded
+  // Set default variant when variants data is loaded
   useEffect(() => {
-    if (sexes?.data?.length > 0) {
+    if (variants?.data?.length > 0) {
       // Find women or take the first option
-      const defaultSex = sexes.data.find((g) => g.name.toLowerCase() === "women") || sexes.data[0];
-      if (defaultSex) {
-        setValue("sex", defaultSex.id);
+      const defaultVariant = variants.data.find((g) => g.name.toLowerCase() === "women") || variants.data[0];
+      if (defaultVariant) {
+        setValue("variant", defaultVariant.id);
       }
     }
-  }, [sexes, setValue]);
+  }, [variants, setValue]);
 
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
 
-      // Convert sex to number to ensure it's sent as a number
-      const sexValue = parseInt(data.sex, 10);
+      // Convert variant to number to ensure it's sent as a number
+      const variantValue = parseInt(data.variant, 10);
 
       // Create the product with minimal information using the server action
       const result = await createProduct({
         name: data.name,
         description: data.description || null,
-        sex: sexValue,
+        variant: variantValue,
         publish_status: "draft",
       });
 
@@ -136,14 +136,14 @@ const AddProductSheet = ({ sexes, buttonText = "Add Product" }) => {
             </div>
 
             <div>
-              <Label className="block mb-2">Gender*</Label>
+              <Label className="block mb-2">Variant*</Label>
               <div className="flex flex-wrap gap-2">
-                {sexes?.data?.length > 0 ? (
-                  sexes.data.map((gender) => (
+                {variants?.data?.length > 0 ? (
+                  variants.data.map((variantOption) => (
                     <label
-                      key={gender.id}
+                      key={variantOption.id}
                       className={`px-4 py-2 rounded-full cursor-pointer transition-all ${
-                        Number(watchSex) === gender.id
+                        Number(watchVariant) === variantOption.id
                           ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
                           : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
                       }`}
@@ -151,18 +151,18 @@ const AddProductSheet = ({ sexes, buttonText = "Add Product" }) => {
                       <input
                         type="radio"
                         className="sr-only"
-                        value={gender.id}
+                        value={variantOption.id}
                         disabled={isSubmitting}
-                        {...register("sex", { valueAsNumber: true })}
+                        {...register("variant", { valueAsNumber: true })}
                       />
-                      {gender.name.charAt(0).toUpperCase() + gender.name.slice(1)}
+                      {variantOption.name.charAt(0).toUpperCase() + variantOption.name.slice(1)}
                     </label>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground">Loading gender options...</div>
+                  <div className="text-sm text-muted-foreground">Loading variant options...</div>
                 )}
               </div>
-              {errors.sex && <p className="mt-1 text-xs text-red-500">{errors.sex.message}</p>}
+              {errors.variant && <p className="mt-1 text-xs text-red-500">{errors.variant.message}</p>}
             </div>
           </div>
 

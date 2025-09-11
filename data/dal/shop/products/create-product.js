@@ -7,7 +7,7 @@ import { products as cache_key_products, product as cache_key_product } from "@/
 /**
  * Create a new product with minimal information
  *
- * @param {Object} productData - Product data with name, description, sex
+ * @param {Object} productData - Product data with name, description, variant
  * @returns {Promise<Object>} - Created product or error
  */
 export async function createProduct(productData) {
@@ -22,11 +22,11 @@ export async function createProduct(productData) {
       `INSERT INTO shop_products (
         name, 
         description, 
-        sex,
+        variant,
         publish_status
       ) VALUES ($1, $2, $3, $4)
-      RETURNING id, name, description, sex, publish_status`,
-      [productData.name, productData.description || null, productData.sex || null, productData.publish_status || "draft"]
+      RETURNING id, name, description, variant, publish_status`,
+      [productData.name, productData.description || null, productData.variant || null, productData.publish_status || "draft"]
     );
 
     if (result.rowCount === 0) {

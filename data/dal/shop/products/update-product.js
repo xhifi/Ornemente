@@ -13,7 +13,7 @@ import {
 
 const updateProduct = async (data) => {
   try {
-    const { id, name, description, tagline, sex, type, brand, original_price, discount, note, sizes, designs, pieces } = data;
+    const { id, name, description, tagline, variant, type, brand, original_price, discount, note, sizes, designs, pieces } = data;
     const productExists = await query(`SELECT id FROM shop_products WHERE id = $1`, [id]);
     if (productExists.rowCount === 0) {
       throw new Error(`Product with ID ${id} does not exist`);
@@ -25,7 +25,7 @@ const updateProduct = async (data) => {
         name = $1,
         description = $2,
         tagline = $3,
-        sex = $4,
+        variant = $4,
         type = $5,
         brand = $6,
         original_price = $7,
@@ -34,7 +34,7 @@ const updateProduct = async (data) => {
         WHERE id = $10
         RETURNING *;
     `,
-      [name, description, tagline, sex, type, brand, original_price, discount, note, id]
+      [name, description, tagline, variant, type, brand, original_price, discount, note, id]
     );
 
     if (!updateProduct.rowCount) {

@@ -16,12 +16,12 @@ function getProductById(productId) {
         `
         SELECT 
           p.*,
-          s.name as sex_name,
+          s.name as variant_name,
           t.name as type_name,
           b.name as brand_name,
           c.name as collection_name
         FROM shop_products p
-        LEFT JOIN shop_sexes s ON p.sex = s.id
+        LEFT JOIN shop_variants s ON p.variant = s.id
         LEFT JOIN shop_types t ON p.type = t.id
         LEFT JOIN shop_brands b ON p.brand = b.id
         LEFT JOIN shop_collections c ON p.collection = c.id
