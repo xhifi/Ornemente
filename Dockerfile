@@ -63,5 +63,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the Next.js application directly
-CMD ["npm", "start"]
+# Start the Next.js standalone server directly
+CMD ["node", "server.js"]
