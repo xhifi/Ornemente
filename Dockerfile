@@ -16,13 +16,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line to disable telemetry
-# ENV NEXT_TELEMETRY_DISABLED=1
-
-# Build the application using a dedicated script that doesn't trigger prebuild
-# This prevents the recursive Docker-in-Docker dependency
 RUN npm run build:docker
 
 # Production image, copy all the files and run next
@@ -32,10 +25,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 # Uncomment the following line to disable telemetry during runtime
 # ENV NEXT_TELEMETRY_DISABLED=1
-
-# Install production dependencies for initialization scripts
-COPY package.json package-lock.json* ./
-RUN npm install --production=true pg ioredis amqplib @aws-sdk/client-s3 @aws-sdk/s3-request-presigner dotenv
 
 # Create a non-root user to run the app
 RUN addgroup --system --gid 1001 nodejs
@@ -56,14 +45,9 @@ COPY --from=builder /app/better-auth.config.js ./
 COPY --from=builder /app/postcss.config.mjs ./
 COPY --from=builder /app/eslint.config.mjs ./
 
-# Copy initialization scripts and data
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/data ./data
-
 # Ensure lib directory is included (may already be in standalone output, but just to be safe)
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/app ./app
-RUN chmod +x ./scripts/docker-entrypoint.sh
 
 # Set the correct permission for prerender cache
 RUN mkdir -p .next/cache
@@ -79,5 +63,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Use the entrypoint script to handle initialization and startup
-CMD ["sh", "./scripts/docker-entrypoint.sh"]
+# Start the Next.js application directly
+CMD ["npm", "start"]
