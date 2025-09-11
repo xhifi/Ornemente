@@ -1,5 +1,3 @@
-"use server";
-
 import cliColors from "./cli-colors";
 
 const initPG = async () => {
