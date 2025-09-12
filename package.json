@@ -7,16 +7,7 @@
     "build": "next build",
     "build:docker": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "init:services": "node scripts/init-services.js",
-    "prebuild": "bash scripts/prebuild.sh",
-    "predocker:build": "node scripts/init-services.js",
-    "docker:build": "docker build -t samra-boutique .",
-    "auth:migrate": "npx @better-auth/cli migrate",
-    "auth:setup": "curl -X GET -H \"x-setup-token: $SETUP_TOKEN\" http://localhost:3000/api/setup-auth",
-    "db:check": "node scripts/check-db.js"
+    "lint": "next lint"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
