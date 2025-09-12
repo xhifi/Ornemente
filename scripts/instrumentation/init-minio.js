@@ -1,12 +1,12 @@
 "use server";
 import cliColors from "./cli-colors";
 import minio from "@/lib/minio";
-import { 
-  HeadBucketCommand, 
-  CreateBucketCommand, 
+import {
+  HeadBucketCommand,
+  CreateBucketCommand,
   PutBucketPolicyCommand,
   GetBucketVersioningCommand,
-  PutBucketVersioningCommand
+  PutBucketVersioningCommand,
 } from "@aws-sdk/client-s3";
 
 const { client, bucketName, endpoint } = minio;
@@ -15,7 +15,7 @@ const initMinio = async () => {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     try {
       console.log(`${cliColors.blue}🔧 Initializing MINIO instrumentation...${cliColors.reset}`);
-      
+
       // Check if bucket exists
       let bucketExists = false;
       try {
@@ -66,20 +66,22 @@ const initMinio = async () => {
       // Check and disable versioning if enabled
       try {
         console.log(`${cliColors.blue}🔧 Checking bucket versioning...${cliColors.reset}`);
-        
+
         const versioningResponse = await client.send(new GetBucketVersioningCommand({ Bucket: bucketName }));
         const versioningStatus = versioningResponse.Status;
-        
+
         if (versioningStatus === "Enabled") {
           console.log(`${cliColors.yellow}! Bucket versioning is enabled, disabling it...${cliColors.reset}`);
-          
-          await client.send(new PutBucketVersioningCommand({
-            Bucket: bucketName,
-            VersioningConfiguration: {
-              Status: "Suspended"
-            }
-          }));
-          
+
+          await client.send(
+            new PutBucketVersioningCommand({
+              Bucket: bucketName,
+              VersioningConfiguration: {
+                Status: "Suspended",
+              },
+            })
+          );
+
           console.log(`${cliColors.green}✓ Bucket versioning disabled successfully${cliColors.reset}`);
         } else if (versioningStatus === "Suspended") {
           console.log(`${cliColors.green}✓ Bucket versioning is already disabled${cliColors.reset}`);
@@ -91,13 +93,13 @@ const initMinio = async () => {
         // Don't throw here as versioning might not be supported in some MinIO setups
       }
 
-      console.log(`${cliColors.green}✓✓ MINIO instrumentation initialized successfully${cliColors.reset}`);
+      console.log(`${cliColors.green}✓ MINIO instrumentation initialized successfully${cliColors.reset}`);
       console.log(`${cliColors.cyan}   Bucket: ${bucketName}${cliColors.reset}`);
       console.log(`${cliColors.cyan}   Endpoint: ${endpoint}${cliColors.reset}`);
 
       return;
     } catch (error) {
-      console.log(`${cliColors.red}✗✗ Error initializing MINIO instrumentation: ${error.message}${cliColors.reset}`);
+      console.log(`${cliColors.red}✗ Error initializing MINIO instrumentation: ${error.message}${cliColors.reset}`);
       console.log(error);
     }
   }
