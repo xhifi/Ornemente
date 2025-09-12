@@ -684,7 +684,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to automatically assign super_admin role to first user
-CREATE TRIGGER trigger_assign_super_admin_to_first_user AFTER
+CREATE
+OR REPLACE TRIGGER trigger_assign_super_admin_to_first_user AFTER
 INSERT
     ON users FOR EACH ROW EXECUTE FUNCTION assign_super_admin_to_first_user();
 
