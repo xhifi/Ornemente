@@ -158,29 +158,51 @@ const RoleSheet = ({ role, availablePermissions = [] }) => {
 
   // Group permissions by resource for better UI
   const permissionsByResource = availablePermissions.reduce((acc, permission) => {
-    // If permission has resources, group by each resource
-    if (permission.resources && permission.resources.length > 0) {
+    // Handle both new resource-specific permissions (products.read) and old format
+    if (permission.name.includes(".")) {
+      // New format: products.read
+      const [resourceName, action] = permission.name.split(".");
+      if (!acc[resourceName]) {
+        acc[resourceName] = [];
+      }
+      acc[resourceName].push({
+        ...permission,
+        action: action,
+        resourceName: resourceName,
+      });
+    } else if (permission.resources && permission.resources.length > 0) {
+      // Old format: generic permission with resources
       permission.resources.forEach((resource) => {
         const resourceName = resource.resource_name || "Unknown Resource";
         if (!acc[resourceName]) {
           acc[resourceName] = [];
         }
-        // Add permission with resource context
         acc[resourceName].push({
           ...permission,
           currentResource: resource,
+          action: permission.name,
+          resourceName: resourceName,
         });
       });
     } else {
-      // If no resources, put in "General" category
+      // Fallback: permissions without resources
       const categoryName = "General Permissions";
       if (!acc[categoryName]) {
         acc[categoryName] = [];
       }
-      acc[categoryName].push(permission);
+      acc[categoryName].push({
+        ...permission,
+        action: permission.name,
+        resourceName: null,
+      });
     }
     return acc;
   }, {});
+
+  // Sort permissions within each resource by action name
+  Object.keys(permissionsByResource).forEach((resourceName) => {
+    permissionsByResource[resourceName].sort((a, b) => a.action.localeCompare(b.action));
+  });
 
   return (
     <Sheet onOpenChange={handleOpenChange} open={open}>
@@ -265,29 +287,31 @@ const RoleSheet = ({ role, availablePermissions = [] }) => {
                     <div className="space-y-6">
                       {Object.entries(permissionsByResource).map(([resourceName, permissions]) => (
                         <div key={resourceName} className="space-y-3">
-                          <h4 className="font-semibold text-sm text-primary border-b pb-2 mb-3">
-                            {resourceName} ({permissions.length} permission{permissions.length !== 1 ? "s" : ""})
+                          <h4 className="font-semibold text-sm text-primary border-b pb-2 mb-3 capitalize">
+                            {resourceName.replace(/[_-]/g, " ")} ({permissions.length} permission{permissions.length !== 1 ? "s" : ""})
                           </h4>
-                          <div className="grid grid-cols-1 gap-3 pl-4">
+                          <div className="grid grid-cols-2 gap-3 pl-4">
                             {permissions.map((permission) => (
                               <div
-                                key={`${permission.id}-${permission.currentResource?.resource_id || "general"}`}
+                                key={`${permission.id}-${permission.currentResource?.resource_id || permission.resourceName || "general"}`}
                                 className="flex items-center space-x-3"
                               >
                                 <Checkbox
-                                  id={`permission-${permission.id}`}
+                                  id={`permission-${permission.id}-${permission.currentResource?.resource_id || permission.resourceName || "general"}`}
                                   checked={selectedPermissions.has(permission.id)}
                                   onCheckedChange={() => handlePermissionToggle(permission.id)}
                                   disabled={isSubmitting}
                                 />
-                                <Label htmlFor={`permission-${permission.id}`} className="flex-1 cursor-pointer">
+                                <Label
+                                  htmlFor={`permission-${permission.id}-${permission.currentResource?.resource_id || permission.resourceName || "general"}`}
+                                  className="flex-1 cursor-pointer"
+                                >
                                   <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{permission.name}</span>
-                                    {permission.currentResource && (
-                                      <span className="text-xs text-muted-foreground">
-                                        Applied to: {permission.currentResource.resource_name}
-                                      </span>
-                                    )}
+                                    <span className="font-medium text-sm capitalize">{permission.action.replace(/[_-]/g, " ")}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {permission.name}
+                                      {permission.currentResource && ` (on ${permission.currentResource.resource_name})`}
+                                    </span>
                                   </div>
                                 </Label>
                               </div>

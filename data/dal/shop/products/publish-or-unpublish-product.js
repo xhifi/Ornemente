@@ -8,8 +8,8 @@ import { hasPermission } from "@/lib/authorization";
 
 const publishOrUnpublishProduct = async (productId, action = true) => {
   try {
-    console.log(await hasPermission("publish", "products"));
-    if (!(await hasPermission("publish", "products"))) {
+    // Publishing/unpublishing requires update permission on products
+    if (!(await hasPermission("update", "products"))) {
       throw new Error("You do not have permission to publish/unpublish products");
     }
 

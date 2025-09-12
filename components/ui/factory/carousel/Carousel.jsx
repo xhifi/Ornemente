@@ -160,6 +160,8 @@ const Carousel = ({
     }
   }, [splideRef.current, isPaused]);
 
+  console.log(slides);
+
   return (
     <div className={`carousel-wrapper relative w-full overflow-hidden my-0 mx-auto ${className}`}>
       <Splide

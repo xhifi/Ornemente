@@ -116,11 +116,37 @@ CREATE TABLE IF NOT EXISTS verifications (
 -- ========================
 -- Role-Based Access Control (RBAC) System
 -- ========================
+-- 
+-- This system implements a comprehensive RBAC solution with the following features:
+-- 
+-- 1. RESOURCE-SPECIFIC PERMISSIONS:
+--    - Uses format: 'resource.action' (e.g., 'products.read', 'orders.create')
+--    - Supported actions: read, create, update, delete, manage, publish
+--    - Each permission maps to exactly one resource for granular control
+-- 
+-- 2. ROLE HIERARCHY:
+--    - Priority-based system (lower number = higher priority)
+--    - super_admin (priority 1): Full access to all resources
+--    - admin (priority 10): Administrative functions
+--    - manager (priority 20): Management functions
+--    - product_manager (priority 25): Product-related management
+--    - seller (priority 30): Selling functions
+--    - customer (priority 100): Basic customer functions
+-- 
+-- 3. AUTO-ASSIGNMENT:
+--    - First user automatically gets super_admin role
+--    - Handled by trigger: assign_super_admin_to_first_user()
+-- 
+-- 4. PERMISSION CHECKING:
+--    - Use functions: get_user_roles(), get_user_permissions()
+--    - Application layer checks via hasPermission(action, resource)
+-- 
 -- Resources Table - Defines what resources exist in the system
+-- Each resource represents a domain entity that can have permissions applied to it
 CREATE TABLE IF NOT EXISTS resources (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    -- e.g., 'products', 'orders', 'users', 'categories'
+    -- e.g., 'products', 'orders', 'users', 'categories', 'shop_variants', 'brands', etc.
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by TEXT REFERENCES users(id),
@@ -128,10 +154,13 @@ CREATE TABLE IF NOT EXISTS resources (
 );
 
 -- Permissions Table - Defines what actions can be performed
+-- NOTE: This system uses resource-specific permission naming (e.g., 'products.read', 'orders.create', 'users.manage')
+-- This allows for granular control over what actions users can perform on specific resources
 CREATE TABLE IF NOT EXISTS permissions (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    -- e.g., 'read', 'create', 'update', 'delete', 'manage'
+    -- Resource-specific format: 'resource.action' (e.g., 'products.read', 'orders.create', 'users.manage')
+    -- Supported actions: read, create, update, delete, manage, publish
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by TEXT REFERENCES users(id),
@@ -608,6 +637,56 @@ RETURN acting_user_priority < COALESCE(role_priority, 999);
 END;
 
 $$ LANGUAGE plpgsql;
+
+-- ========================
+-- Auto-Assignment Function for Super Admin Role
+-- ========================
+-- Function to automatically assign super_admin role to the first user
+-- This ensures that the first user always has full administrative access
+CREATE
+OR REPLACE FUNCTION assign_super_admin_to_first_user() RETURNS TRIGGER AS $$
+DECLARE
+    user_count INTEGER;
+
+super_admin_role_id INTEGER;
+
+BEGIN
+    -- Count total users (including the one being inserted)
+    SELECT
+        COUNT(*) INTO user_count
+    FROM
+        users;
+
+-- If this is the first user, assign super_admin role
+IF user_count = 1 THEN -- Get super_admin role ID
+SELECT
+    id INTO super_admin_role_id
+FROM
+    roles
+WHERE
+    name = 'super_admin';
+
+-- Only assign if super_admin role exists
+IF super_admin_role_id IS NOT NULL THEN
+INSERT INTO
+    user_roles (user_id, role_id, assigned_by)
+VALUES
+    (NEW .id, super_admin_role_id, NEW .id) ON CONFLICT (user_id, role_id) DO NOTHING;
+
+END IF;
+
+END IF;
+
+RETURN NEW;
+
+END;
+
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically assign super_admin role to first user
+CREATE TRIGGER trigger_assign_super_admin_to_first_user AFTER
+INSERT
+    ON users FOR EACH ROW EXECUTE FUNCTION assign_super_admin_to_first_user();
 
 -- ========================
 -- Initial RBAC Data Setup

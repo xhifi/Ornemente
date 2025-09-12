@@ -11,6 +11,8 @@ const ManagePermissionsPage = async () => {
 
   const availablePermissions = permissionsResult.permissions || [];
   const availableResources = resourcesResult.data || [];
+  console.log(`Available Permissions:`, JSON.stringify(availablePermissions, null, 2));
+  console.log(`Available Resources:`, availableResources);
 
   return (
     <>
@@ -39,7 +41,16 @@ const ManagePermissionsPage = async () => {
             return (
               <TableRow key={permission.id}>
                 <TableCell className="font-medium">{i + 1}</TableCell>
-                <TableCell className="font-medium">{permission.name}</TableCell>
+                <TableCell className="font-medium">
+                  {permission.name.includes(".") ? (
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm">{permission.name.split(".")[1]}</span>
+                      <span className="text-xs text-muted-foreground">on {permission.name.split(".")[0]}</span>
+                    </div>
+                  ) : (
+                    permission.name
+                  )}
+                </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {permission.resources && permission.resources.length > 0 ? (
@@ -51,6 +62,10 @@ const ManagePermissionsPage = async () => {
                           {resource.resource_name}
                         </span>
                       ))
+                    ) : permission.name.includes(".") ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {permission.name.split(".")[0]}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground text-sm">No resources assigned</span>
                     )}

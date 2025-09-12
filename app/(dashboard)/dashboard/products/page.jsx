@@ -16,7 +16,7 @@ export default async function ProductsPage() {
   const canReadProducts = await hasPermission("read", "products");
   const canUpdateProducts = await hasPermission("update", "products");
   const canDeleteProducts = await hasPermission("delete", "products");
-  const canPublishProducts = await hasPermission("publish", "products");
+  const canPublishProducts = await hasPermission("update", "products"); // Publishing requires update permission
 
   if (!canReadProducts) {
     return unauthorized();

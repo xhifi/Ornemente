@@ -70,16 +70,24 @@ const getAllPermissions = async ({ includeResourceCount = false, orderBy = "reso
 
         // Handle ordering
         if (orderBy === "resources") {
-          // Order by the first resource name (alphabetically) associated with each permission
+          // Order by resource name - handle both new and old formats
           queryText += `
-        ORDER BY (
-          SELECT r_inner.name 
-          FROM resource_permissions rp_inner 
-          JOIN resources r_inner ON rp_inner.resource_id = r_inner.id 
-          WHERE rp_inner.permission_id = p.id 
-          ORDER BY r_inner.name 
-          LIMIT 1
-        ) ${orderDirection}, p.name ASC
+        ORDER BY 
+          CASE 
+            WHEN p.name LIKE '%.%' THEN SPLIT_PART(p.name, '.', 1)
+            ELSE (
+              SELECT r_inner.name 
+              FROM resource_permissions rp_inner 
+              JOIN resources r_inner ON rp_inner.resource_id = r_inner.id 
+              WHERE rp_inner.permission_id = p.id 
+              ORDER BY r_inner.name 
+              LIMIT 1
+            )
+          END ${orderDirection}, 
+          CASE 
+            WHEN p.name LIKE '%.%' THEN SPLIT_PART(p.name, '.', 2)
+            ELSE p.name
+          END ASC
         `;
         } else {
           queryText += `ORDER BY p.${orderBy} ${orderDirection}`;
