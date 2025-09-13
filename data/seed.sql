@@ -295,14 +295,15 @@ WHERE
         OR p.name LIKE 'reviews.%'
     ) ON CONFLICT (role_id, resource_permission_id) DO NOTHING;
 
--- Insert shop data
+-- Insert shop data with explicit slugs to avoid conflicts
+-- This prevents slug generation triggers from creating duplicate slugs
 INSERT INTO
-    shop_variants(name)
+    shop_variants(name, slug)
 VALUES
-    ('men'),
-    ('women'),
-    ('unisex'),
-    ('kids') ON CONFLICT (name) DO NOTHING;
+    ('men', 'men'),
+    ('women', 'women'),
+    ('unisex', 'unisex'),
+    ('kids', 'kids') ON CONFLICT (name) DO NOTHING;
 
 -- Reset sequence to avoid conflicts
 SELECT
@@ -318,30 +319,30 @@ SELECT
     );
 
 INSERT INTO
-    shop_sizes(code)
+    shop_sizes(code, slug)
 VALUES
-    ('XS'),
-    ('S'),
-    ('M'),
-    ('L'),
-    ('XL'),
-    ('XXL'),
-    ('XS/S'),
-    ('M/L'),
-    ('XL/XXL') ON CONFLICT (code) DO NOTHING;
+    ('XS', 'xs'),
+    ('S', 's'),
+    ('M', 'm'),
+    ('L', 'l'),
+    ('XL', 'xl'),
+    ('XXL', 'xxl'),
+    ('XS/S', 'xs-s'),
+    ('M/L', 'm-l'),
+    ('XL/XXL', 'xl-xxl') ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO
-    shop_brands(name)
+    shop_brands(name, slug)
 VALUES
-    ('Nishat'),
-    ('JDot'),
-    ('Alkaram'),
-    ('Gul Ahmed'),
-    ('Khaadi'),
-    ('Sapphire'),
-    ('Edenrobe'),
-    ('Outfitters'),
-    ('Almirah') ON CONFLICT (name) DO NOTHING;
+    ('Nishat', 'nishat'),
+    ('JDot', 'jdot'),
+    ('Alkaram', 'alkaram'),
+    ('Gul Ahmed', 'gul-ahmed'),
+    ('Khaadi', 'khaadi'),
+    ('Sapphire', 'sapphire'),
+    ('Edenrobe', 'edenrobe'),
+    ('Outfitters', 'outfitters'),
+    ('Almirah', 'almirah') ON CONFLICT (name) DO NOTHING;
 
 -- Reset sequence to avoid conflicts  
 SELECT
@@ -357,14 +358,14 @@ SELECT
     );
 
 INSERT INTO
-    shop_types(name)
+    shop_types(name, slug)
 VALUES
-    ('none'),
-    ('Stitched'),
-    ('Un-stitched'),
-    ('Dress'),
-    ('Ready to wear'),
-    ('Pret') ON CONFLICT (name) DO NOTHING;
+    ('none', 'none'),
+    ('Stitched', 'stitched'),
+    ('Un-stitched', 'un-stitched'),
+    ('Dress', 'dress'),
+    ('Ready to wear', 'ready-to-wear'),
+    ('Pret', 'pret') ON CONFLICT (name) DO NOTHING;
 
 -- Reset sequence to avoid conflicts
 SELECT
@@ -379,15 +380,32 @@ SELECT
         false
     );
 
+-- Only insert designs if they don't exist (safe for existing databases)
 INSERT INTO
-    shop_designs(name)
-VALUES
-    ('none'),
-    ('embroidered'),
-    ('printed'),
-    ('digital-printed'),
-    ('plain'),
-    ('dyed') ON CONFLICT (name) DO NOTHING;
+    shop_designs(name, slug)
+SELECT
+    name,
+    slug
+FROM
+    (
+        VALUES
+            ('none', 'none'),
+            ('embroidered', 'embroidered'),
+            ('printed', 'printed'),
+            ('digital-printed', 'digital-printed'),
+            ('plain', 'plain'),
+            ('dyed', 'dyed')
+    ) AS v(name, slug)
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            shop_designs
+        WHERE
+            shop_designs.name = v.name
+            OR shop_designs.slug = v.slug
+    );
 
 -- Reset sequence to avoid conflicts
 SELECT
@@ -403,13 +421,13 @@ SELECT
     );
 
 INSERT INTO
-    shop_collections(name)
+    shop_collections(name, slug)
 VALUES
-    ('Summer Collection'),
-    ('Winter Collection'),
-    ('Eid Collection'),
-    ('Bridal Collection'),
-    ('Festive Collection') ON CONFLICT (name) DO NOTHING;
+    ('Summer Collection', 'summer-collection'),
+    ('Winter Collection', 'winter-collection'),
+    ('Eid Collection', 'eid-collection'),
+    ('Bridal Collection', 'bridal-collection'),
+    ('Festive Collection', 'festive-collection') ON CONFLICT (name) DO NOTHING;
 
 -- Reset sequence to avoid conflicts
 SELECT
@@ -425,16 +443,16 @@ SELECT
     );
 
 INSERT INTO
-    shop_fabrics(name)
+    shop_fabrics(name, slug)
 VALUES
-    ('Cotton'),
-    ('Lawn'),
-    ('Silk'),
-    ('Chiffon'),
-    ('Georgette'),
-    ('Linen'),
-    ('Velvet'),
-    ('Wool') ON CONFLICT (name) DO NOTHING;
+    ('Cotton', 'cotton'),
+    ('Lawn', 'lawn'),
+    ('Silk', 'silk'),
+    ('Chiffon', 'chiffon'),
+    ('Georgette', 'georgette'),
+    ('Linen', 'linen'),
+    ('Velvet', 'velvet'),
+    ('Wool', 'wool') ON CONFLICT (name) DO NOTHING;
 
 -- Reset sequence to avoid conflicts
 SELECT

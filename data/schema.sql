@@ -1010,7 +1010,10 @@ INSERT
 -- Trigger for shop_variants
 CREATE
 OR REPLACE FUNCTION set_shop_variants_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1026,7 +1029,10 @@ INSERT
 -- Trigger for shop_types
 CREATE
 OR REPLACE FUNCTION set_shop_types_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1044,7 +1050,10 @@ UPDATE
 -- Trigger for shop_collections
 CREATE
 OR REPLACE FUNCTION set_shop_collections_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1060,7 +1069,10 @@ INSERT
 -- Trigger for shop_brands
 CREATE
 OR REPLACE FUNCTION set_shop_brands_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1076,7 +1088,10 @@ INSERT
 -- Trigger for shop_fabrics
 CREATE
 OR REPLACE FUNCTION set_shop_fabrics_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1092,7 +1107,10 @@ INSERT
 -- Trigger for shop_colors
 CREATE
 OR REPLACE FUNCTION set_shop_colors_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1108,7 +1126,10 @@ INSERT
 -- Trigger for shop_designs
 CREATE
 OR REPLACE FUNCTION set_shop_designs_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .name);
+    -- Only set slug if it's not provided
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .name);
+
+END IF;
 
 RETURN NEW;
 
@@ -1124,7 +1145,9 @@ INSERT
 -- Trigger for shop_sizes - uses code column
 CREATE
 OR REPLACE FUNCTION set_shop_sizes_slug() RETURNS TRIGGER AS $$ BEGIN
-    NEW .slug := slugify(NEW .code);
+    IF NEW .slug IS NULL THEN NEW .slug := slugify(NEW .code);
+
+END IF;
 
 RETURN NEW;
 

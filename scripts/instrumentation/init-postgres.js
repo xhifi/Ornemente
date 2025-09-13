@@ -7,7 +7,7 @@ const initPG = async () => {
     const fs = require("fs");
     const path = require("path");
     try {
-      console.log(`${cliColors.green}🔧 Initializing Postgres instrumentation...${cliColors.reset}`);
+      console.log(`${cliColors.yellow}🔧 Initializing Postgres instrumentation...${cliColors.reset}`);
       const schemaPath = path.join(process.cwd(), "data", "schema.sql");
       const seedPath = path.join(process.cwd(), "data", "seed.sql");
       const schemaQuery = (await fs.promises.readFile(schemaPath, "utf-8")).toString();
@@ -15,13 +15,14 @@ const initPG = async () => {
 
       // Apply schema first
       const q = await query(schemaQuery);
-      console.log(`${cliColors.green}✓ Postgres schema applied successfully${cliColors.reset}`);
+      console.log(`${cliColors.cyan}✓ Postgres schema applied successfully${cliColors.reset}`);
       if (q) {
         // Apply seed data
         await query(seedQuery);
-        console.log(`${cliColors.green}✓ Postgres seed data applied successfully${cliColors.reset}`);
+        console.log(`${cliColors.cyan}✓ Postgres seed data applied successfully${cliColors.reset}`);
+        console.log(`${cliColors.green}✓ Postgres instrumentation initialized successfully${cliColors.reset}`);
       }
-      return;
+      return true;
     } catch (error) {
       console.log(`${cliColors.red}✗ Error initializing Postgres instrumentation: ${error.message}${cliColors.reset}`);
       console.log(error);

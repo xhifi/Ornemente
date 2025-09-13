@@ -14,14 +14,14 @@ const { client, bucketName, endpoint } = minio;
 const initMinio = async () => {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     try {
-      console.log(`${cliColors.blue}🔧 Initializing MINIO instrumentation...${cliColors.reset}`);
+      console.log(`${cliColors.yellow}🔧 Initializing MINIO instrumentation...${cliColors.reset}`);
 
       // Check if bucket exists
       let bucketExists = false;
       try {
         await client.send(new HeadBucketCommand({ Bucket: bucketName }));
         bucketExists = true;
-        console.log(`${cliColors.green}✓ Bucket '${bucketName}' already exists${cliColors.reset}`);
+        console.log(`${cliColors.cyan}✓ Bucket '${bucketName}' already exists${cliColors.reset}`);
       } catch (error) {
         if (error.name === "NotFound" || error.name === "NoSuchBucket" || error.$metadata?.httpStatusCode === 404) {
           console.log(`${cliColors.yellow}! Bucket '${bucketName}' does not exist, creating it...${cliColors.reset}`);
@@ -35,7 +35,7 @@ const initMinio = async () => {
       if (!bucketExists) {
         try {
           await client.send(new CreateBucketCommand({ Bucket: bucketName }));
-          console.log(`${cliColors.green}✓ Bucket '${bucketName}' created successfully${cliColors.reset}`);
+          console.log(`${cliColors.cyan}✓ Bucket '${bucketName}' created successfully${cliColors.reset}`);
 
           // Set bucket policy to allow public read access
           const policy = {
@@ -56,7 +56,7 @@ const initMinio = async () => {
               Policy: JSON.stringify(policy),
             })
           );
-          console.log(`${cliColors.green}✓ Bucket policy set for public read access${cliColors.reset}`);
+          console.log(`${cliColors.cyan}✓ Bucket policy set for public read access${cliColors.reset}`);
         } catch (createError) {
           console.log(`${cliColors.red}✗ Failed to create bucket '${bucketName}': ${createError.message}${cliColors.reset}`);
           throw createError;
@@ -65,7 +65,7 @@ const initMinio = async () => {
 
       // Check and disable versioning if enabled
       try {
-        console.log(`${cliColors.blue}🔧 Checking bucket versioning...${cliColors.reset}`);
+        console.log(`${cliColors.yellow}🔧 Checking bucket versioning...${cliColors.reset}`);
 
         const versioningResponse = await client.send(new GetBucketVersioningCommand({ Bucket: bucketName }));
         const versioningStatus = versioningResponse.Status;
@@ -82,22 +82,22 @@ const initMinio = async () => {
             })
           );
 
-          console.log(`${cliColors.green}✓ Bucket versioning disabled successfully${cliColors.reset}`);
+          console.log(`${cliColors.cyan}✓ Bucket versioning disabled successfully${cliColors.reset}`);
         } else if (versioningStatus === "Suspended") {
-          console.log(`${cliColors.green}✓ Bucket versioning is already disabled${cliColors.reset}`);
+          console.log(`${cliColors.cyan}✓ Bucket versioning is already disabled${cliColors.reset}`);
         } else {
-          console.log(`${cliColors.green}✓ Bucket versioning is not enabled${cliColors.reset}`);
+          console.log(`${cliColors.cyan}✓ Bucket versioning is not enabled${cliColors.reset}`);
         }
       } catch (versioningError) {
         console.log(`${cliColors.yellow}! Warning: Could not check/disable versioning: ${versioningError.message}${cliColors.reset}`);
         // Don't throw here as versioning might not be supported in some MinIO setups
       }
 
-      console.log(`${cliColors.green}✓ MINIO instrumentation initialized successfully${cliColors.reset}`);
       console.log(`${cliColors.cyan}   Bucket: ${bucketName}${cliColors.reset}`);
       console.log(`${cliColors.cyan}   Endpoint: ${endpoint}${cliColors.reset}`);
+      console.log(`${cliColors.green}✓ MINIO instrumentation initialized successfully${cliColors.reset}`);
 
-      return;
+      return true;
     } catch (error) {
       console.log(`${cliColors.red}✗ Error initializing MINIO instrumentation: ${error.message}${cliColors.reset}`);
       console.log(error);
