@@ -671,7 +671,7 @@ IF super_admin_role_id IS NOT NULL THEN
 INSERT INTO
     user_roles (user_id, role_id, assigned_by)
 VALUES
-    (NEW .id, super_admin_role_id, NEW .id) ON CONFLICT (user_id, role_id) DO NOTHING;
+    (NEW .id, super_admin_role_id, NULL) ON CONFLICT (user_id, role_id) DO NOTHING;
 
 END IF;
 
